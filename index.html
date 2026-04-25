@@ -10,149 +10,227 @@
   
   <style>
     :root {
-      --aliva-azul-escuro: #2a7a9b;
-      --aliva-azul-claro: #3dbcba;
-      --aliva-fundo: #eaf6f6;
+      --aliva-escuro: #2a7a9b; --aliva-claro: #3dbcba; --fundo: #eaf6f6; --branco: #ffffff;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: var(--aliva-fundo); padding: 15px; }
-
-    /* Navegação por Abas */
-    .nav-tabs {
-      display: flex;
-      gap: 10px;
-      max-width: 800px;
-      margin: 0 auto 20px auto;
-    }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--fundo); padding: 15px; color: #333; }
+    
+    .nav-tabs { display: flex; gap: 8px; max-width: 800px; margin: 0 auto 20px auto; }
     .tab-btn {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      background: white;
-      color: var(--aliva-azul-escuro);
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      flex: 1; padding: 14px; border: none; border-radius: 12px;
+      background: var(--branco); color: var(--aliva-escuro);
+      font-weight: bold; cursor: pointer; transition: 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    .tab-btn.active {
-      background: var(--aliva-azul-escuro);
-      color: white;
-    }
+    .tab-btn.active { background: var(--aliva-escuro); color: var(--branco); }
 
-    .card { 
-      background: white; 
-      border-radius: 14px; 
-      padding: 25px; 
-      max-width: 800px; 
-      margin: 0 auto; 
-      box-shadow: 0 4px 18px rgba(61,188,184,0.15); 
-    }
-
+    .card { background: var(--branco); border-radius: 16px; padding: 25px; max-width: 800px; margin: 0 auto; box-shadow: 0 10px 25px rgba(42, 122, 155, 0.1); }
     .aba-conteudo { display: none; }
-    .aba-conteudo.active { display: block; }
+    .aba-conteudo.active { display: block; animation: fadeIn 0.4s; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    h2 { color: var(--aliva-azul-escuro); margin-bottom: 20px; font-size: 1.2rem; }
+    header { text-align: center; margin-bottom: 20px; }
+    .logo { max-width: 140px; }
+    .section-title { font-size: 0.85rem; color: var(--aliva-claro); text-transform: uppercase; margin: 20px 0 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; font-weight: bold; }
     
     .input-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; color: #555; font-weight: 600; }
-    input, textarea { 
-      width: 100%; padding: 12px; border: 1px solid #b2e0de; border-radius: 8px; font-size: 1rem;
-    }
+    label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--aliva-escuro); }
+    input, textarea, select { width: 100%; padding: 12px; border: 1.5px solid #d1e8e7; border-radius: 10px; font-size: 1rem; outline: none; }
+    input:focus { border-color: var(--aliva-claro); }
 
-    .btn {
-      width: 100%; padding: 15px; border: none; border-radius: 8px;
-      color: white; font-weight: bold; cursor: pointer; margin-top: 10px;
-    }
-    .btn-primary { background: var(--aliva-azul-claro); }
-    .btn-secondary { background: var(--aliva-azul-escuro); }
+    .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f9fdfd; padding: 10px; border-radius: 8px; border: 1px solid #e1f0ef; }
+    .radio-item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .radio-item input { width: auto; }
 
-    /* Estilo da lista de arquivos */
-    .arquivo-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 15px; border-bottom: 1px solid #eee;
-    }
+    .btn { width: 100%; padding: 16px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; font-size: 1rem; margin-top: 10px; }
+    .btn-primary { background: var(--aliva-claro); }
+    .btn-secondary { background: #6c757d; }
+
+    .arquivo-card { background: #f9fdfd; border: 1px solid #e1f0ef; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    #previewImg { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 2px solid var(--aliva-claro); }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-  <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('aba-novo')">Novo Registo</button>
-    <button class="tab-btn" onclick="switchTab('aba-arquivo'); carregarArquivos();">Arquivo</button>
-  </div>
+<header><img src="Hlogo.png" alt="Aliva" class="logo" onerror="this.style.display='none'"></header>
 
-  <div id="aba-novo" class="aba-conteudo active">
-    <div class="card">
-      <h2>Nova História Clínica</h2>
-      
-      <div class="input-group">
-        <label>Nome do Paciente</label>
-        <input type="text" id="nome" placeholder="Ex: João Silva">
-      </div>
+<div class="nav-tabs">
+  <button id="btn-novo" class="tab-btn active" onclick="switchTab('aba-novo')">Novo / Editar</button>
+  <button id="btn-arquivo" class="tab-btn" onclick="switchTab('aba-arquivo')">Arquivo Digital</button>
+</div>
 
-      <div class="input-group">
-        <label>Capturar Documento (Câmara/Ficheiro)</label>
-        <input type="file" id="cameraInput" accept="image/*" capture="environment">
-        <img id="previewImg" style="display:none; width: 100%; margin-top:10px; border-radius:8px; border: 2px solid var(--aliva-azul-claro);">
-      </div>
-
-      <button class="btn btn-primary" onclick="salvarDocumento()">Gerar e Enviar PDF</button>
+<div id="aba-novo" class="aba-conteudo active">
+  <div class="card">
+    <div id="edit-indicator" class="hidden" style="background: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 15px; color: #856404; font-size: 0.9rem; text-align: center;">
+      ⚠️ Modo de Edição Ativo: Atualizando Processo
     </div>
-  </div>
+    
+    <div class="section-title">Identificação</div>
+    <div class="input-group"><label>Nome do Paciente</label><input type="text" id="nome"></div>
+    <div class="input-group"><label>Nº Processo / ID</label><input type="text" id="processo"></div>
+    <div class="input-group"><label>Exame Solicitado</label><input type="text" id="exame"></div>
 
-  <div id="aba-arquivo" class="aba-conteudo">
-    <div class="card">
-      <h2>Documentos no Google Drive</h2>
-      <div id="lista-arquivos">A carregar documentos...</div>
+    <div class="section-title">História Clínica</div>
+    <div class="input-group"><label>Hipótese Diagnóstica</label><textarea id="hipotese" rows="2"></textarea></div>
+
+    <div class="input-group">
+      <label>Cirurgia Prévia?</label>
+      <div class="radio-grid">
+        <label class="radio-item"><input type="radio" name="cirurgia" value="Não" checked onclick="toggleField('cirurgiaQual', false)"> Não</label>
+        <label class="radio-item"><input type="radio" name="cirurgia" value="Sim" onclick="toggleField('cirurgiaQual', true)"> Sim</label>
+      </div>
+      <input type="text" id="cirurgiaQual" placeholder="Qual cirurgia?" class="hidden" style="margin-top:10px">
     </div>
+
+    <div class="input-group">
+      <label>Tratamento Quimio/Radioterapia?</label>
+      <div class="radio-grid">
+        <label class="radio-item"><input type="radio" name="quimio" value="Não" checked onclick="toggleField('quimioTempo', false)"> Não</label>
+        <label class="radio-item"><input type="radio" name="quimio" value="Sim" onclick="toggleField('quimioTempo', true)"> Sim</label>
+      </div>
+      <input type="text" id="quimioTempo" placeholder="Há quanto tempo?" class="hidden" style="margin-top:10px">
+    </div>
+
+    <div class="input-group">
+      <label>Trauma Local?</label>
+      <div class="radio-grid">
+        <label class="radio-item"><input type="radio" name="trauma" value="Não" checked onclick="toggleField('traumaQual', false)"> Não</label>
+        <label class="radio-item"><input type="radio" name="trauma" value="Sim" onclick="toggleField('traumaQual', true)"> Sim</label>
+      </div>
+      <input type="text" id="traumaQual" placeholder="Descrição do trauma" class="hidden" style="margin-top:10px">
+    </div>
+
+    <div class="input-group"><label>Febre ou Outros Sintomas?</label><input type="text" id="febre"></div>
+    <div class="input-group"><label>Data de Início dos Sintomas</label><input type="date" id="inicioSintomas"></div>
+
+    <div class="section-title">Documentação (CamScanner)</div>
+    <div class="input-group">
+      <label>Adicionar Documento / Imagem</label>
+      <input type="file" id="cameraInput" accept="image/*,application/pdf" capture="environment">
+      <img id="previewImg">
+    </div>
+
+    <button class="btn btn-primary" onclick="processarEnvio()" id="btnEnviar">Guardar e Sincronizar</button>
+    <button class="btn btn-secondary hidden" id="btnCancelarEdicao" onclick="limparModoEdicao()">Cancelar Edição</button>
   </div>
+</div>
 
-  <script>
-    const SCRIPT_URL = 'URL_DO_SEU_GOOGLE_SCRIPT';
+<div id="aba-arquivo" class="aba-conteudo">
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2>Arquivo Aliva</h2>
+      <button onclick="carregarArquivos()" style="color:var(--aliva-claro); background:none; border:none; cursor:pointer; font-weight:bold;">🔄 Atualizar</button>
+    </div>
+    <div id="lista-arquivos">A carregar documentos...</div>
+  </div>
+</div>
 
-    function switchTab(id) {
-      document.querySelectorAll('.aba-conteudo, .tab-btn').forEach(el => el.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-      event.currentTarget.classList.add('active');
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec';
+  let dadosOriginais = [];
+
+  function toggleField(id, show) {
+    document.getElementById(id).classList.toggle('hidden', !show);
+  }
+
+  function switchTab(id) {
+    document.querySelectorAll('.aba-conteudo, .tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(id === 'aba-novo') document.getElementById('btn-novo').classList.add('active');
+    else { document.getElementById('btn-arquivo').classList.add('active'); carregarArquivos(); }
+  }
+
+  document.getElementById('cameraInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = e => { const img = document.getElementById('previewImg'); img.src = e.target.result; img.style.display = 'block'; };
+      reader.readAsDataURL(file);
     }
+  });
 
-    // Pré-visualização da imagem
-    document.getElementById('cameraInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          const img = document.getElementById('previewImg');
-          img.src = event.target.result;
-          img.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-      }
-    });
-
-    async function carregarArquivos() {
-      const container = document.getElementById('lista-arquivos');
-      try {
-        const res = await fetch(SCRIPT_URL);
-        const data = await res.json();
-        if (data.length === 0) {
-          container.innerHTML = "Nenhum ficheiro encontrado.";
-          return;
-        }
-        container.innerHTML = data.map(f => `
-          <div class="arquivo-item">
-            <span>${f.name}</span>
-            <a href="${f.url}" target="_blank" style="color:var(--aliva-azul-escuro); font-weight:bold;">Abrir</a>
+  async function carregarArquivos() {
+    const lista = document.getElementById('lista-arquivos');
+    lista.innerHTML = "A aceder ao Drive...";
+    try {
+      const response = await fetch(SCRIPT_URL);
+      dadosOriginais = await response.json();
+      lista.innerHTML = dadosOriginais.map((arq, index) => `
+        <div class="arquivo-card">
+          <div>
+            <div style="font-weight:bold; color:var(--aliva-escuro)">${arq.name}</div>
+            <div style="font-size:0.8rem; color:#888">${new Date(arq.date).toLocaleString()}</div>
           </div>
-        `).join('');
-      } catch (e) {
-        container.innerHTML = "Erro ao carregar. Verifique o URL do Script.";
-      }
+          <div style="display:flex; gap:5px;">
+            <button onclick="prepararEdicao(${index})" style="background:#ffc107; border:none; padding:8px; border-radius:6px; cursor:pointer;">✏️</button>
+            <a href="${arq.url}" target="_blank" style="background:var(--aliva-escuro); color:white; padding:8px 12px; border-radius:8px; text-decoration:none; font-size:0.9rem;">Ver</a>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) { lista.innerHTML = "Erro ao carregar lista."; }
+  }
+
+  function prepararEdicao(index) {
+    const arq = dadosOriginais[index];
+    // Aqui extraímos o nome e processo do título do ficheiro
+    const partes = arq.name.replace('Ficha_', '').split('_');
+    document.getElementById('nome').value = partes[0] || '';
+    document.getElementById('processo').value = partes[1] || '';
+    
+    document.getElementById('edit-indicator').classList.remove('hidden');
+    document.getElementById('btnCancelarEdicao').classList.remove('hidden');
+    switchTab('aba-novo');
+    window.scrollTo(0,0);
+  }
+
+  function limparModoEdicao() {
+    location.reload();
+  }
+
+  async function processarEnvio() {
+    const btn = document.getElementById('btnEnviar');
+    const nome = document.getElementById('nome').value;
+    if (!nome) { alert("O nome é obrigatório."); return; }
+    
+    btn.disabled = true; btn.innerText = "A processar...";
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Design do PDF
+    doc.setFontSize(18); doc.setTextColor(42, 122, 155);
+    doc.text("Relatório Clínico - Aliva Saúde", 20, 20);
+    doc.setFontSize(11); doc.setTextColor(0);
+    
+    const campos = [
+      ["Paciente", nome], ["Processo", document.getElementById('processo').value],
+      ["Exame", document.getElementById('exame').value], ["Hipótese", document.getElementById('hipotese').value],
+      ["Cirurgia", document.querySelector('input[name="cirurgia"]:checked').value + " " + document.getElementById('cirurgiaQual').value],
+      ["Quimio/Radio", document.querySelector('input[name="quimio"]:checked').value + " " + document.getElementById('quimioTempo').value],
+      ["Trauma", document.querySelector('input[name="trauma"]:checked').value + " " + document.getElementById('traumaQual').value],
+      ["Sintomas", document.getElementById('febre').value], ["Início", document.getElementById('inicioSintomas').value]
+    ];
+
+    let y = 40;
+    campos.forEach(c => { doc.text(`${c[0]}: ${c[1]}`, 20, y); y += 10; });
+
+    const imgData = document.getElementById('previewImg').src;
+    if (imgData.startsWith('data:image')) {
+      doc.addPage();
+      doc.text("Documentos Anexados:", 20, 20);
+      doc.addImage(imgData, 'JPEG', 15, 30, 180, 0);
     }
 
-    // Próximo passo: Implementaremos a função salvarDocumento() 
-    // que gera o PDF com a imagem e envia para o Drive.
-  </script>
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ nome: `Ficha_${nome.replace(/\s/g, '_')}_${document.getElementById('processo').value}`, pdf: pdfBase64 })
+      });
+      alert("Processo guardado com sucesso!");
+      limparModoEdicao();
+    } catch (e) { alert("Erro ao sincronizar."); btn.disabled = false; }
+  }
+</script>
 </body>
 </html>
