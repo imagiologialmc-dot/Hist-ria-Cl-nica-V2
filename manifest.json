@@ -1,12 +1,10 @@
 {
-  "name": "Aliva Saúde — Gestão Clínica",
+  "name": "Aliva Saúde - Gestão",
   "short_name": "Aliva App",
-  "description": "Sistema de recolha de informação clínica e arquivo digital",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#eaf6f6",
   "theme_color": "#2a7a9b",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.jpg",
