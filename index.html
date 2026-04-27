@@ -30,8 +30,7 @@
     .radio-group label { flex: 1; background: #fff; border: 1.5px solid #d1e8e7; padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: bold; color: #777; }
     .radio-group input:checked + label { background: var(--aliva-claro); border-color: var(--aliva-claro); color: white; }
     .conditional-field { display: none; margin-top: 10px; }
-    .queue-section { margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 20px; }
-    .item-registo { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 8px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .item-registo { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 8px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; }
     .btn-primary { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--aliva-claro); color: white; margin-top: 20px; }
     .action-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 5px; }
     #scanner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; flex-direction: column; z-index: 10000; }
@@ -97,10 +96,10 @@
     <input type="file" id="camInput" accept="image/*" capture="environment">
     <div id="preview-container"></div>
 
-    <button class="btn-primary" onclick="finalizarRegisto()">Finalizar e Sincronizar</button>
+    <button class="btn-primary" id="btnSincronizar" onclick="finalizarRegisto()">Finalizar e Sincronizar</button>
   </div>
 
-  <div class="card queue-section hidden" id="container-pendentes">
+  <div class="card hidden" id="container-pendentes">
     <div style="font-size:0.9rem; color:#666; font-weight:bold; margin-bottom:10px;">⏳ Pendentes de Envio</div>
     <div id="lista-pendentes"></div>
   </div>
@@ -128,7 +127,7 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec";
     let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null;
 
-    window.onload = () => { atualizarFilaUI(); setInterval(syncProcess, 8000); };
+    window.onload = () => { atualizarFilaUI(); setInterval(syncProcess, 5000); };
 
     function toggleC(id, s) { document.getElementById(id).style.display = s ? 'block' : 'none'; }
     function switchTab(id) {
@@ -155,18 +154,18 @@
         const w = canvas.width, h = canvas.height;
         pontos = [{x:w*0.1,y:h*0.1},{x:w*0.9,y:h*0.1},{x:w*0.9,y:h*0.9},{x:w*0.1,y:h*0.9}];
         desenharUI(); 
-        canvas.onmousedown = canvas.ontouchstart = e => { 
-            const rect = canvas.getBoundingClientRect(); 
+        const rect = canvas.getBoundingClientRect();
+        canvas.ontouchstart = canvas.onmousedown = e => {
             const t = e.touches ? e.touches[0] : e;
             const px = t.clientX - rect.left, py = t.clientY - rect.top;
             let pi = null; pontos.forEach((pt, i) => { if(Math.hypot(pt.x-px, pt.y-py) < 35) pi = i; });
             if(pi !== null) {
-                window.onmousemove = window.ontouchmove = ev => {
+                window.ontouchmove = window.onmousemove = ev => {
                     const tt = ev.touches ? ev.touches[0] : ev;
                     pontos[pi] = {x: tt.clientX - rect.left, y: tt.clientY - rect.top};
                     desenharUI();
                 };
-                window.onmouseup = window.ontouchend = () => window.onmousemove = window.ontouchmove = null;
+                window.ontouchend = window.onmouseup = () => window.ontouchmove = window.onmousemove = null;
             }
         };
     }
@@ -202,30 +201,29 @@
     function finalizarRegisto() {
         const nome = document.getElementById('nome').value;
         if(!nome) return alert("Nome obrigatório");
-        const getV = id => document.getElementById(id).value;
         const reg = {
             idLocal: editandoID || Date.now(),
             driveFileID: driveFileID, 
             nome: nome,
-            dataNasc: getV('dataNasc'),
-            idPaciente: getV('idPaciente'),
-            exame: getV('exame'),
-            hipotese: getV('hipotese'),
+            dataNasc: document.getElementById('dataNasc').value,
+            idPaciente: document.getElementById('idPaciente').value,
+            exame: document.getElementById('exame').value,
+            hipotese: document.getElementById('hipotese').value,
             cirurgia: document.querySelector('input[name="cirurgia"]:checked').value,
-            cir_det: getV('cir_det'),
+            cir_det: document.getElementById('cir_det').value,
             quimio: document.querySelector('input[name="quimio"]:checked').value,
-            q_det: getV('q_det'),
+            q_det: document.getElementById('q_det').value,
             trauma: document.querySelector('input[name="trauma"]:checked').value,
-            t_det: getV('t_det'),
-            sintomas: getV('sintomas'),
-            inicio: getV('inicio'),
+            t_det: document.getElementById('t_det').value,
+            sintomas: document.getElementById('sintomas').value,
+            inicio: document.getElementById('inicio').value,
             anexos: anexos
         };
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
         if(editandoID) fila = fila.filter(x => x.idLocal !== editandoID);
         fila.push(reg);
         localStorage.setItem('aliva_fila', JSON.stringify(fila));
-        resetForm(); atualizarFilaUI(); alert("Guardado. Sincronização em curso.");
+        resetForm(); atualizarFilaUI(); alert("Registo em fila de envio.");
     }
 
     function atualizarFilaUI() {
@@ -236,7 +234,7 @@
         cont.classList.remove('hidden');
         lista.innerHTML = fila.map(f => `
             <div class="item-registo" style="background:var(--pendente)">
-                <div><b>${f.nome}</b><br><small>Sincronização pendente...</small></div>
+                <div><b>${f.nome}</b><br><small>A sincronizar...</small></div>
                 <button class="action-btn" onclick="editarReg(${f.idLocal}, true)">✏️</button>
             </div>
         `).join('');
@@ -244,11 +242,15 @@
 
     async function carregarOnline() {
         const lista = document.getElementById('lista-online');
-        lista.innerHTML = "A atualizar lista do Drive...";
+        lista.innerHTML = "A carregar...";
         try {
             const res = await fetch(SCRIPT_URL);
             const data = await res.json();
-            lista.innerHTML = data.map(f => `
+            // Filtrar itens que o utilizador apagou localmente mas ainda constam na resposta do servidor por delay
+            const apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
+            const filtrados = data.filter(f => !apagados.includes(f.id));
+            
+            lista.innerHTML = filtrados.map(f => `
                 <div class="item-registo" id="row-${f.id}">
                     <div><b>${f.name}</b><br><small>${new Date(f.date).toLocaleDateString()}</small></div>
                     <div style="display:flex; gap:10px;">
@@ -258,15 +260,14 @@
                     </div>
                 </div>
             `).join('');
-        } catch(e) { lista.innerHTML = "Erro de rede. Tente novamente."; }
+        } catch(e) { lista.innerHTML = "Erro ao carregar."; }
     }
 
     function editarReg(id, isPendente) {
         const fila = JSON.parse(localStorage.getItem(isPendente ? 'aliva_fila' : 'aliva_online_cache') || "[]");
-        const f = fila.find(x => x.idLocal === id || x.id === id);
+        const f = fila.find(x => x.idLocal === id);
         if(!f) return;
-        editandoID = f.idLocal || f.id;
-        driveFileID = f.driveFileID || f.id; 
+        editandoID = f.idLocal; driveFileID = f.driveFileID;
         document.getElementById('edit-indicator').classList.remove('hidden');
         document.getElementById('nome').value = f.nome;
         document.getElementById('dataNasc').value = f.dataNasc;
@@ -282,11 +283,8 @@
         switchTab('aba-novo'); window.scrollTo(0,0);
     }
 
-    async function editarOnline(id, nome) {
-        // Para edição online total, precisaríamos que o Script enviasse os metadados JSON. 
-        // Como o Script só gera PDF, esta função preenche o nome e ID para permitir a substituição.
-        editandoID = id;
-        driveFileID = id;
+    function editarOnline(id, nome) {
+        editandoID = Date.now(); driveFileID = id;
         document.getElementById('nome').value = nome.replace('Ficha_', '').replace(/-/g, ' ');
         document.getElementById('edit-indicator').classList.remove('hidden');
         anexos = []; renderAnexos();
@@ -294,13 +292,18 @@
     }
 
     async function apagarOnline(id) {
-        if(!confirm("Eliminar permanentemente do Drive?")) return;
+        if(!confirm("Eliminar permanentemente?")) return;
         const row = document.getElementById('row-' + id);
-        if(row) row.style.opacity = "0.3";
+        if(row) row.remove(); // REMOÇÃO IMEDIATA DA UI
+        
+        // Guardar ID como apagado localmente para não reaparecer no refresh imediato
+        let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
+        apagados.push(id);
+        localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
+
         try {
             await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
-            if(row) row.remove();
-        } catch(e) { alert("Falha na rede."); if(row) row.style.opacity = "1"; }
+        } catch(e) { console.warn("Erro no delete, mas item removido da vista."); }
     }
 
     async function syncProcess() {
@@ -312,24 +315,18 @@
         try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e){}
         doc.setFontSize(14); doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
         doc.autoTable({
-            startY: 45, head: [['Campo', 'Informação']],
+            startY: 45, head: [['Campo', 'Info']],
             body: [
-                ['Paciente', item.nome], ['ID Proc.', item.idPaciente], ['Nasc.', item.dataNasc], ['Exame', item.exame],
-                ['Hipótese', item.hipotese], ['Cirurgia', item.cir_det || item.cirurgia],
-                ['Quimio/Radio', item.q_det || item.quimio], ['Trauma', item.t_det || item.trauma],
-                ['Sintomas', item.sintomas], ['Início', item.inicio]
+                ['Paciente', item.nome], ['ID Proc.', item.idPaciente], ['Exame', item.exame],
+                ['Cirurgia', item.cir_det || item.cirurgia], ['Quimio/Radio', item.q_det || item.quimio],
+                ['Trauma', item.t_det || item.trauma], ['Sintomas', item.sintomas]
             ],
             theme: 'striped', headStyles: { fillColor: [42, 122, 155] }
         });
         item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
         try {
             const base64 = doc.output('datauristring').split(',')[1];
-            const payload = { 
-                nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, 
-                pdf: base64,
-                oldID: item.driveFileID // Envia o ID para o Script apagar o antigo se for edição
-            };
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, pdf: base64, oldID: item.driveFileID }) });
             if(res.ok) { fila.shift(); localStorage.setItem('aliva_fila', JSON.stringify(fila)); atualizarFilaUI(); }
         } catch(e) {}
     }
