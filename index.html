@@ -6,57 +6,36 @@
   <title>Aliva Saúde — Gestão Clínica</title>
   <link rel="manifest" href="manifest.json"/>
   <meta name="theme-color" content="#2a7a9b"/>
-  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript"></script>
-  
   <style>
     :root { --aliva-escuro: #2a7a9b; --aliva-claro: #3dbcba; --fundo: #eaf6f6; --branco: #ffffff; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: var(--fundo); padding: 10px; color: #333; overflow-x: hidden; }
-    
-    /* Layout e Navegação */
+    body { font-family: 'Segoe UI', sans-serif; background: var(--fundo); padding: 10px; color: #333; }
     header { text-align: center; padding: 10px 0; }
     .logo { max-width: 160px; height: auto; }
     .nav-tabs { display: flex; gap: 5px; max-width: 800px; margin: 0 auto 15px auto; }
     .tab-btn { flex: 1; padding: 14px; border: none; border-radius: 12px; background: white; color: var(--aliva-escuro); font-weight: bold; cursor: pointer; transition: 0.2s; }
     .tab-btn.active { background: var(--aliva-escuro); color: white; }
-    
     .card { background: white; border-radius: 16px; padding: 20px; max-width: 800px; margin: 0 auto 30px auto; box-shadow: 0 8px 20px rgba(42, 122, 155, 0.08); }
     .aba-conteudo { display: none; }
-    .aba-conteudo.active { display: block; animation: fadeIn 0.3s; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-    /* Formulário Estilo Original */
+    .aba-conteudo.active { display: block; }
     .section-title { font-size: 0.85rem; color: var(--aliva-claro); text-transform: uppercase; margin: 20px 0 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; font-weight: bold; letter-spacing: 1px; }
     .input-group { margin-bottom: 15px; }
     label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--aliva-escuro); font-size: 0.95rem; }
-    input, textarea { width: 100%; padding: 12px; border: 1.5px solid #d1e8e7; border-radius: 10px; font-size: 1rem; outline: none; transition: 0.3s; }
-    input:focus { border-color: var(--aliva-claro); box-shadow: 0 0 0 3px rgba(61, 188, 186, 0.1); }
-
-    /* Botões Sim/Não Quadrados */
-    .radio-group { display: flex; gap: 10px; margin-top: 5px; }
-    .radio-group input[type="radio"] { display: none; }
-    .radio-group label {
-      flex: 1; background: #fff; border: 1.5px solid #d1e8e7; padding: 12px; border-radius: 10px;
-      text-align: center; cursor: pointer; font-weight: bold; color: #777; transition: 0.2s;
-    }
-    .radio-group input[type="radio"]:checked + label { background: var(--aliva-claro); border-color: var(--aliva-claro); color: white; }
-    .conditional-field { display: none; margin-top: 10px; padding: 10px; background: #f0fafa; border-radius: 8px; border-left: 4px solid var(--aliva-claro); }
-
-    /* Scanner FOV Manual */
+    input, textarea { width: 100%; padding: 12px; border: 1.5px solid #d1e8e7; border-radius: 10px; font-size: 1rem; outline: none; }
+    .radio-group { display: flex; gap: 10px; }
+    .radio-group input { display: none; }
+    .radio-group label { flex: 1; background: #fff; border: 1.5px solid #d1e8e7; padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: bold; color: #777; }
+    .radio-group input:checked + label { background: var(--aliva-claro); border-color: var(--aliva-claro); color: white; }
+    .conditional-field { display: none; margin-top: 10px; }
     #scanner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; flex-direction: column; z-index: 10000; }
     #scanner-ui-cont { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; touch-action: none; }
     .scanner-btns { display: flex; padding: 20px; gap: 10px; background: #1a1a1a; }
-    
-    /* Botões Gerais */
-    .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
+    .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
     .btn-primary { background: var(--aliva-claro); color: white; }
     .btn-save { background: var(--aliva-claro); color: white; margin-top: 20px; font-size: 1.1rem; }
-    .btn-delete { background: #ffeded; color: #d93025; padding: 8px; width: auto; font-size: 0.8rem; }
-
-    /* Lista de Arquivos */
     .arquivo-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; background: #fdfdfd; margin-bottom: 8px; border-radius: 10px; }
     .thumb { width: 70px; height: 90px; object-fit: cover; border-radius: 8px; border: 2px solid var(--aliva-claro); margin-top: 10px; cursor: pointer; }
     .status-tag { font-size: 0.7rem; text-align: center; color: #999; margin-bottom: 5px; }
@@ -66,19 +45,16 @@
 <body>
 
 <header><img src="Hlogo.png" alt="Aliva Saúde" class="logo"></header>
-<div id="status-cv" class="status-tag">A carregar motor de imagem...</div>
+<div id="status-cv" class="status-tag">A carregar motor...</div>
 
 <div class="nav-tabs">
   <button id="tab-novo" class="tab-btn active" onclick="switchTab('aba-novo')">Ficha Clínica</button>
-  <button id="tab-arquivo" class="tab-btn" onclick="switchTab('aba-arquivo')">Arquivo Digital</button>
+  <button id="tab-arquivo" class="tab-btn" onclick="switchTab('aba-arquivo')">Arquivo</button>
 </div>
 
 <div id="aba-novo" class="aba-conteudo active">
   <div class="card">
-    <div id="edit-mode-info" class="hidden" style="background:#fff3cd; color:#856404; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center; font-weight:bold;">
-      ✏️ A Editar Processo Existente
-    </div>
-
+    <div id="edit-info" class="hidden" style="background:#fff3cd; color:#856404; padding:10px; border-radius:8px; margin-bottom:15px; text-align:center;">✏️ Edição Ativa</div>
     <div class="section-title">Dados do Paciente</div>
     <div class="input-group"><label>Nome Completo</label><input type="text" id="nome"></div>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
@@ -86,302 +62,166 @@
         <div class="input-group"><label>ID / Processo</label><input type="text" id="idPaciente"></div>
     </div>
     <div class="input-group"><label>Exame Solicitado</label><input type="text" id="exame"></div>
-
     <div class="section-title">História Clínica</div>
     <div class="input-group"><label>Hipótese Diagnóstica</label><textarea id="hipotese" rows="2"></textarea></div>
 
     <div class="input-group">
       <label>Cirurgia Prévia?</label>
       <div class="radio-group">
-        <input type="radio" name="cirurgia" id="c_n" value="Não" checked onclick="toggleC('g-cir', false)">
-        <label for="c_n">Não</label>
-        <input type="radio" name="cirurgia" id="c_s" value="Sim" onclick="toggleC('g-cir', true)">
-        <label for="c_s">Sim</label>
+        <input type="radio" name="cirurgia" id="cn" value="Não" checked onclick="toggleC('gc', false)"><label for="cn">Não</label>
+        <input type="radio" name="cirurgia" id="cs" value="Sim" onclick="toggleC('gc', true)"><label for="cs">Sim</label>
       </div>
-      <div id="g-cir" class="conditional-field"><input type="text" id="cir_det" placeholder="Qual e quando?"></div>
-    </div>
-
-    <div class="input-group">
-      <label>Quimio ou Radioterapia?</label>
-      <div class="radio-group">
-        <input type="radio" name="quimio" id="q_n" value="Não" checked onclick="toggleC('g-q', false)">
-        <label for="q_n">Não</label>
-        <input type="radio" name="quimio" id="q_s" value="Sim" onclick="toggleC('g-q', true)">
-        <label for="q_s">Sim</label>
-      </div>
-      <div id="g-q" class="conditional-field"><input type="text" id="q_det" placeholder="Quantas sessões?"></div>
+      <div id="gc" class="conditional-field"><input type="text" id="cir_det" placeholder="Qual e quando?"></div>
     </div>
 
     <div class="input-group">
       <label>Trauma Local?</label>
       <div class="radio-group">
-        <input type="radio" name="trauma" id="t_n" value="Não" checked onclick="toggleC('g-t', false)">
-        <label for="t_n">Não</label>
-        <input type="radio" name="trauma" id="t_s" value="Sim" onclick="toggleC('g-t', true)">
-        <label for="t_s">Sim</label>
+        <input type="radio" name="trauma" id="tn" value="Não" checked onclick="toggleC('gt', false)"><label for="tn">Não</label>
+        <input type="radio" name="trauma" id="ts" value="Sim" onclick="toggleC('gt', true)"><label for="ts">Sim</label>
       </div>
-      <div id="g-t" class="conditional-field"><input type="text" id="t_det" placeholder="Descreva o trauma"></div>
+      <div id="gt" class="conditional-field"><input type="text" id="t_det" placeholder="Descreva o trauma"></div>
     </div>
 
-    <div class="input-group"><label>Febre ou Outros Sintomas?</label><input type="text" id="sintomas"></div>
-    <div class="input-group"><label>Início dos Sintomas (Tempo)</label><input type="text" id="inicio"></div>
+    <div class="input-group"><label>Febre / Outros Sintomas</label><input type="text" id="sintomas"></div>
+    <div class="input-group"><label>Início dos Sintomas</label><input type="text" id="inicio"></div>
 
-    <div class="section-title">Anexos (Filtro Cópia a Cores)</div>
+    <div class="section-title">Anexos</div>
     <input type="file" id="camInput" accept="image/*" capture="environment">
-    <div id="preview-container" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+    <div id="preview-container"></div>
 
     <button class="btn btn-save" id="btnSubmit" onclick="gerarEEnviar()">Finalizar e Sincronizar</button>
-    <button class="btn hidden" id="btnCancelEdit" style="background:#eee; color:#333; margin-top:10px;" onclick="cancelarEdicao()">Sair sem guardar</button>
   </div>
 </div>
 
 <div id="aba-arquivo" class="aba-conteudo">
   <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="color:var(--aliva-escuro)">Arquivo Recente</h2>
-        <button onclick="carregarLista()" style="background:none; border:none; color:var(--aliva-claro); font-weight:bold; cursor:pointer;">🔄 Atualizar</button>
+    <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+        <h2>Arquivo</h2>
+        <button onclick="carregarLista()" style="background:none; border:none; color:var(--aliva-claro); font-weight:bold;">🔄</button>
     </div>
-    <div id="lista-arquivos">A carregar documentos...</div>
+    <div id="lista-arquivos">A carregar...</div>
   </div>
 </div>
 
 <div id="scanner-overlay">
-    <div style="color:white; text-align:center; padding:15px; font-weight:bold;">Ajuste os cantos da folha</div>
     <div id="scanner-ui-cont"><canvas id="canvas-ui"></canvas></div>
     <div class="scanner-btns">
-        <button class="btn" style="background:#444; color:white;" onclick="fecharScanner()">Cancelar</button>
-        <button class="btn btn-primary" onclick="finalizarProcessamento()">Aplicar Realce</button>
+        <button class="btn" style="background:#444; color:white;" onclick="fecharScanner()">Sair</button>
+        <button class="btn btn-primary" onclick="finalizarProcessamento()">Aplicar Filtro</button>
     </div>
 </div>
 
 <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec';
-    let anexos = [];
-    let dbAtiva = [];
-    let pontos = [];
-    let imgTemp = null;
-    let escalaVisual = 1;
-    let modoEdicao = false;
+    const SCRIPT_URL = "SUA_URL_AQUI"; // COLOQUE AQUI A SUA URL DO GOOGLE SCRIPT
+    let anexos = [], dbAtiva = [], pontos = [], imgTemp = null, escalaVisual = 1;
 
-    // Inicializar Motor de Imagem
-    var checkCV = setInterval(() => {
-        if (typeof cv !== 'undefined' && cv.Mat) {
-            document.getElementById('status-cv').innerText = "Motor de Imagem Ativo ✅";
-            clearInterval(checkCV);
-        }
-    }, 500);
-
-    function toggleC(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
-    
+    var checkCV = setInterval(() => { if (typeof cv !== 'undefined' && cv.Mat) { document.getElementById('status-cv').innerText = "Sistema de Imagem Ativo ✅"; clearInterval(checkCV); } }, 500);
+    function toggleC(id, s) { document.getElementById(id).style.display = s ? 'block' : 'none'; }
     function switchTab(id) {
         document.querySelectorAll('.aba-conteudo, .tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        document.getElementById('tab-' + id.split('-')[1]).classList.add('active');
         if(id === 'aba-arquivo') carregarLista();
     }
 
-    // Captura de Imagem e Scanner
     document.getElementById('camInput').addEventListener('change', function(e) {
         if(!e.target.files[0]) return;
-        const reader = new FileReader();
-        reader.onload = ev => {
-            const img = new Image();
-            img.onload = () => abrirScannerManual(img);
-            img.src = ev.target.result;
-        };
-        reader.readAsDataURL(e.target.files[0]);
+        const r = new FileReader();
+        r.onload = ev => { const i = new Image(); i.onload = () => abrirScanner(i); i.src = ev.target.result; };
+        r.readAsDataURL(e.target.files[0]);
     });
 
-    function abrirScannerManual(img) {
-        imgTemp = img;
-        const overlay = document.getElementById('scanner-overlay');
+    function abrirScanner(img) {
+        imgTemp = img; document.getElementById('scanner-overlay').style.display = 'flex';
         const canvas = document.getElementById('canvas-ui');
-        const ctx = canvas.getContext('2d');
-        overlay.style.display = 'flex';
-
-        const maxW = window.innerWidth * 0.95;
-        const maxH = window.innerHeight * 0.75;
+        const maxW = window.innerWidth * 0.95, maxH = window.innerHeight * 0.75;
         escalaVisual = Math.min(maxW / img.width, maxH / img.height);
-        canvas.width = img.width * escalaVisual;
-        canvas.height = img.height * escalaVisual;
-
+        canvas.width = img.width * escalaVisual; canvas.height = img.height * escalaVisual;
         const w = canvas.width, h = canvas.height;
         pontos = [{x:w*0.05,y:h*0.05},{x:w*0.95,y:h*0.05},{x:w*0.95,y:h*0.95},{x:w*0.05,y:h*0.95}];
-        
-        desenharUI();
-        configurarTouch(canvas);
+        desenharUI(); configurarTouch(canvas);
     }
 
     function desenharUI() {
-        const canvas = document.getElementById('canvas-ui');
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(imgTemp, 0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = "#3dbcba"; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(pontos[0].x, pontos[0].y);
-        pontos.forEach(p => ctx.lineTo(p.x, p.y));
-        ctx.closePath(); ctx.stroke();
-        ctx.fillStyle = "#3dbcba";
-        pontos.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, Math.PI*2); ctx.fill(); });
+        const ctx = document.getElementById('canvas-ui').getContext('2d');
+        ctx.drawImage(imgTemp, 0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.strokeStyle = "#3dbcba"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(pontos[0].x, pontos[0].y);
+        pontos.forEach(p => ctx.lineTo(p.x, p.y)); ctx.closePath(); ctx.stroke();
+        ctx.fillStyle = "#3dbcba"; pontos.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 20, 0, Math.PI*2); ctx.fill(); });
     }
 
     function configurarTouch(canvas) {
-        let pIndex = null;
-        const getPos = e => {
-            const r = canvas.getBoundingClientRect();
-            const t = e.touches ? e.touches[0] : e;
-            return { x: t.clientX - r.left, y: t.clientY - r.top };
-        };
-        canvas.onmousedown = canvas.ontouchstart = e => {
-            const pos = getPos(e);
-            pontos.forEach((p, i) => { if(Math.hypot(p.x-pos.x, p.y-pos.y) < 40) pIndex = i; });
-        };
-        window.onmousemove = window.ontouchmove = e => {
-            if(pIndex !== null) { const pos = getPos(e); pontos[pIndex] = pos; desenharUI(); }
-        };
-        window.onmouseup = window.ontouchend = () => pIndex = null;
+        let pI = null;
+        const getP = e => { const r = canvas.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; };
+        canvas.onmousedown = canvas.ontouchstart = e => { const p = getP(e); pontos.forEach((pt, i) => { if(Math.hypot(pt.x-p.x, pt.y-p.y) < 40) pI = i; }); };
+        window.onmousemove = window.ontouchmove = e => { if(pI !== null) { pontos[pI] = getP(e); desenharUI(); } };
+        window.onmouseup = window.ontouchend = () => pI = null;
     }
 
     function finalizarProcessamento() {
-        try {
-            const src = cv.imread(imgTemp);
-            let ptsReal = []; pontos.forEach(p => { ptsReal.push(p.x/escalaVisual); ptsReal.push(p.y/escalaVisual); });
-            let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, ptsReal);
-            const outW = 1000, outH = 1400;
-            let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0,0, outW,0, outW,outH, 0,outH]);
-            let M = cv.getPerspectiveTransform(srcTri, dstTri);
-            let dst = new cv.Mat();
-            cv.warpPerspective(src, dst, M, new cv.Size(outW, outH));
-
-            // FILTRO DE REALCE (Cópia a cores nítida)
-            // Aumenta o contraste e brilho para o texto "saltar"
-            dst.convertTo(dst, -1, 1.25, 15); 
-            
-            const canvasOut = document.createElement('canvas');
-            cv.imshow(canvasOut, dst);
-            anexos.push(canvasOut.toDataURL('image/jpeg', 0.85));
-            renderAnexos();
-
-            src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete();
-            fecharScanner();
-        } catch(e) { alert("Aguarde o motor carregar."); }
+        const src = cv.imread(imgTemp);
+        let ptsR = []; pontos.forEach(p => { ptsR.push(p.x/escalaVisual); ptsR.push(p.y/escalaVisual); });
+        let srcT = cv.matFromArray(4, 1, cv.CV_32FC2, ptsR);
+        const oW = 1000, oH = 1400;
+        let dstT = cv.matFromArray(4, 1, cv.CV_32FC2, [0,0, oW,0, oW,oH, 0,oH]);
+        let M = cv.getPerspectiveTransform(srcT, dstT), dst = new cv.Mat();
+        cv.warpPerspective(src, dst, M, new cv.Size(oW, oH));
+        dst.convertTo(dst, -1, 1.4, 10); // Realce de contraste para letras nítidas
+        const cOut = document.createElement('canvas'); cv.imshow(cOut, dst);
+        anexos.push(cOut.toDataURL('image/jpeg', 0.8));
+        document.getElementById('preview-container').innerHTML = anexos.map((img, i) => `<img src="${img}" class="thumb" onclick="if(confirm('Apagar?')){anexos.splice(${i},1);renderAnexos();}">`).join('');
+        src.delete(); dst.delete(); M.delete(); document.getElementById('scanner-overlay').style.display='none';
     }
 
-    function fecharScanner() { document.getElementById('scanner-overlay').style.display = 'none'; }
-    
-    function renderAnexos() {
-        document.getElementById('preview-container').innerHTML = anexos.map((img, i) => 
-            `<img src="${img}" class="thumb" onclick="if(confirm('Eliminar esta imagem?')){anexos.splice(${i},1);renderAnexos();}">`).join('');
-    }
+    function fecharScanner() { document.getElementById('scanner-overlay').style.display='none'; }
 
-    // LISTAGEM E EDIÇÃO
     async function carregarLista() {
-        const lista = document.getElementById('lista-arquivos');
-        lista.innerHTML = "A carregar...";
-        try {
-            const res = await fetch(SCRIPT_URL);
-            dbAtiva = await res.json();
-            lista.innerHTML = dbAtiva.map((f, i) => `
-                <div class="arquivo-item">
-                    <div>
-                        <div style="font-weight:bold">${f.name}</div>
-                        <div style="font-size:0.8rem; color:#888">${new Date(f.date).toLocaleDateString()}</div>
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <button onclick="prepararEdicao(${i})" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">✏️</button>
-                        <button onclick="eliminarFicheiro('${f.id}')" style="border:none; background:none; cursor:pointer; font-size:1.2rem;">🗑️</button>
-                        <a href="${f.url}" target="_blank" style="text-decoration:none; font-size:1.2rem;">👁️</a>
-                    </div>
+        const l = document.getElementById('lista-arquivos');
+        const res = await fetch(SCRIPT_URL);
+        dbAtiva = await res.json();
+        l.innerHTML = dbAtiva.map((f, i) => `
+            <div class="arquivo-item">
+                <div><b>${f.name}</b><br><small>${new Date(f.date).toLocaleDateString()}</small></div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="prepararEdicao(${i})" style="border:none;background:none;font-size:1.2rem;">✏️</button>
+                    <button onclick="apagarDefinitivo('${f.id}')" style="border:none;background:none;font-size:1.2rem;">🗑️</button>
+                    <a href="${f.url}" target="_blank" style="text-decoration:none;font-size:1.2rem;">👁️</a>
                 </div>
-            `).join('');
-        } catch(e) { lista.innerHTML = "Erro ao ligar ao servidor."; }
+            </div>`).join('');
+    }
+
+    async function apagarDefinitivo(id) {
+        if(!confirm("Eliminar este ficheiro permanentemente? Esta ação é irreversível.")) return;
+        await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "delete", id: id }) });
+        carregarLista(); // Refresh automático
     }
 
     function prepararEdicao(idx) {
         const f = dbAtiva[idx];
-        modoEdicao = true;
-        document.getElementById('edit-mode-info').classList.remove('hidden');
-        document.getElementById('btnCancelEdit').classList.remove('hidden');
-        
-        // Tentar recuperar nome e processo do título
-        const cleanName = f.name.replace('Ficha_', '');
-        const partes = cleanName.split('_');
-        document.getElementById('nome').value = partes[0] ? partes[0].replace(/-/g, ' ') : '';
-        document.getElementById('idPaciente').value = partes[1] || '';
-        
+        document.getElementById('nome').value = f.name.replace('Ficha_', '').split('_')[0].replace(/-/g,' ');
         switchTab('aba-novo');
-    }
-
-    function cancelarEdicao() { location.reload(); }
-
-    async function eliminarFicheiro(id) {
-        if(confirm("Deseja eliminar permanentemente este ficheiro do Drive?")) {
-            // Nota: O seu Script precisa de aceitar pedidos de eliminação
-            alert("O ficheiro será movido para a lixeira do Drive.");
-            // Lógica de delete via fetch aqui se configurada no script
-        }
     }
 
     async function gerarEEnviar() {
         const nome = document.getElementById('nome').value;
-        if(!nome) { alert("Nome obrigatório"); return; }
-        
-        document.getElementById('btnSubmit').disabled = true;
-        document.getElementById('btnSubmit').innerText = "A Sincronizar...";
-
+        if(!nome) return alert("Nome obrigatório");
+        document.getElementById('btnSubmit').innerText = "Sincronizando...";
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        const logo = document.querySelector('.logo');
+        try { doc.addImage(logo, 'PNG', 85, 10, 40, 0); } catch(e) {}
         
-        // --- DESIGN OFICIAL PDF ALIVA ---
-        try {
-            // Tenta desenhar o logo se estiver disponível no servidor
-            const logo = document.querySelector('.logo');
-            doc.addImage(logo, 'PNG', 85, 10, 40, 0);
-        } catch(e) {
-            doc.setTextColor(42, 122, 155);
-            doc.setFontSize(24); doc.text("aliva", 105, 20, {align:'center'});
-        }
-
-        doc.setFontSize(14); doc.setTextColor(50);
-        doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
-        doc.setFontSize(9); doc.text(`Gerado em: ${new Date().toLocaleString()}`, 105, 41, {align:'center'});
-
+        doc.setFontSize(14); doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
         const getV = id => document.getElementById(id).value;
-        const getR = (name, detId) => document.querySelector(`input[name="${name}"]:checked`).value === "Sim" ? `Sim (${getV(detId)})` : "Não";
-
         doc.autoTable({
-            startY: 50,
-            head: [['Secção', 'Informação Detalhada']],
-            body: [
-                ['Paciente', getV('nome')],
-                ['ID / Processo', getV('idPaciente')],
-                ['Data Nasc.', getV('dataNasc')],
-                ['Exame', getV('exame')],
-                ['Hipótese', getV('hipotese')],
-                ['Cirurgia', getR('cirurgia', 'cir_det')],
-                ['Quimio/Radio', getR('quimio', 'q_det')],
-                ['Trauma', getR('trauma', 't_det')],
-                ['Sintomas', getV('sintomas')],
-                ['Início', getV('inicio')]
-            ],
-            theme: 'striped',
-            headStyles: { fillColor: [42, 122, 155] },
-            styles: { fontSize: 10 }
+            startY: 45, head: [['Secção', 'Detalhes']],
+            body: [['Paciente', getV('nome')],['ID', getV('idPaciente')],['Exame', getV('exame')],['Hipótese', getV('hipotese')],['Sintomas', getV('sintomas')],['Início', getV('inicio')]],
+            theme: 'striped', headStyles: { fillColor: [42, 122, 155] }
         });
-
-        // Adicionar Anexos
-        anexos.forEach(img => {
-            doc.addPage();
-            doc.addImage(img, 'JPEG', 5, 5, 200, 287);
-        });
-
+        anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
         const base64 = doc.output('datauristring').split(',')[1];
-        const nomeFicheiro = `Ficha_${nome.replace(/\s/g, '-')}_${getV('idPaciente')}`;
-
-        try {
-            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ nome: nomeFicheiro, pdf: base64 }) });
-            alert("Documento sincronizado com sucesso!");
-            location.reload();
-        } catch(e) { alert("Erro de rede."); document.getElementById('btnSubmit').disabled = false; }
+        await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ nome: `Ficha_${nome.replace(/\s/g,'-')}`, pdf: base64 }) });
+        alert("Guardado!"); location.reload();
     }
 </script>
 </body>
