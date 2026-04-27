@@ -4,10 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Aliva Saúde — Gestão Clínica</title>
-  <link rel="manifest" href="manifest.json"/>
+  <link rel="manifest" href="manifest.json?v=2"/>
   <meta name="theme-color" content="#2a7a9b"/>
-  
-  <link rel="apple-touch-icon" href="icon-192.jpg">
+  <link rel="icon" type="image/jpeg" href="icon-192.jpg?v=2">
+  <link rel="apple-touch-icon" href="icon-192.jpg?v=2">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -36,6 +36,7 @@
     .conditional-field { display: none; margin-top: 10px; }
     .item-registo { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 8px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .btn-primary { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--aliva-claro); color: white; margin-top: 10px; }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
     .btn-secondary { width: 100%; padding: 12px; border: 2px solid #ccc; border-radius: 12px; font-weight: bold; cursor: pointer; background: white; color: #666; margin-top: 10px; }
     .action-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 5px; }
     #scanner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; flex-direction: column; z-index: 10000; }
@@ -103,7 +104,7 @@
     <input type="file" id="camInput" accept="image/*" capture="environment">
     <div id="preview-container"></div>
 
-    <button class="btn-primary" onclick="finalizarRegisto()">Finalizar e Sincronizar</button>
+    <button id="btnFinalizar" class="btn-primary" onclick="finalizarRegisto()">Finalizar e Sincronizar</button>
     <button class="btn-secondary hidden" id="btnCancelar" onclick="resetForm()">Sair sem Guardar</button>
   </div>
 
@@ -135,6 +136,7 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec";
     
     let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
+    let isSyncing = false; // BLOQUEIO PARA EVITAR DUPLICADOS
 
     window.onload = () => { atualizarFilaUI(); setInterval(syncProcess, 5000); };
 
@@ -146,7 +148,6 @@
         if(id === 'aba-arquivo') carregarOnline();
     }
 
-    // --- LOGICA DE SCANNER (OpenCV) ---
     document.getElementById('camInput').addEventListener('change', function(e) {
         if(!e.target.files[0]) return;
         const r = new FileReader();
@@ -206,10 +207,11 @@
     }
     function fecharScanner() { document.getElementById('scanner-overlay').style.display='none'; }
 
-    // --- LOGICA GERAL DE DADOS ---
     function finalizarRegisto() {
         const nome = document.getElementById('nome').value;
         if(!nome) return alert("O Nome é obrigatório.");
+        
+        document.getElementById('btnFinalizar').disabled = true; // EVITA CLIQUE DUPLO
         
         const getV = id => document.getElementById(id).value;
         const reg = {
@@ -241,6 +243,7 @@
         localStorage.setItem('aliva_fila', JSON.stringify(fila));
         
         resetForm(); atualizarFilaUI(); alert("Registo colocado na fila de envio.");
+        document.getElementById('btnFinalizar').disabled = false;
     }
 
     function atualizarFilaUI() {
@@ -349,8 +352,12 @@
     }
 
     async function syncProcess() {
+        if (isSyncing) return; // SE JÁ ESTIVER A ENVIAR, NÃO COMEÇA OUTRO
+        
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
         if(fila.length === 0) return;
+        
+        isSyncing = true; // ATIVA O BLOQUEIO
         const item = fila[0];
         
         const { jsPDF } = window.jspdf;
@@ -392,20 +399,12 @@
                 delete cache[item.driveFileID || item.idLocal];
                 localStorage.setItem('aliva_cache', JSON.stringify(cache));
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error("Erro na sincronização:", e);
+        } finally {
+            isSyncing = false; // LIBERTA O BLOQUEIO
+        }
     }
 
     function resetForm() {
         editandoID = null; driveFileID = null;
-        document.getElementById('edit-indicator').classList.add('hidden');
-        document.getElementById('btnCancelar').classList.add('hidden');
-        document.querySelectorAll('input[type="text"], input[type="date"], textarea').forEach(i => i.value = "");
-        document.getElementById('cn').checked = true; toggleC('gc', false);
-        document.getElementById('qn').checked = true; toggleC('gq', false);
-        document.getElementById('tn').checked = true; toggleC('gt', false);
-        anexos = []; renderAnexos();
-        window.scrollTo(0,0);
-    }
-</script>
-</body>
-</html>
