@@ -408,3 +408,15 @@
 
     function resetForm() {
         editandoID = null; driveFileID = null;
+        document.getElementById('edit-indicator').classList.add('hidden');
+        document.getElementById('btnCancelar').classList.add('hidden');
+        document.querySelectorAll('input[type="text"], input[type="date"], textarea').forEach(i => i.value = "");
+        document.getElementById('cn').checked = true; toggleC('gc', false);
+        document.getElementById('qn').checked = true; toggleC('gq', false);
+        document.getElementById('tn').checked = true; toggleC('gt', false);
+        anexos = []; renderAnexos();
+        window.scrollTo(0,0);
+    }
+</script>
+</body>
+</html>
