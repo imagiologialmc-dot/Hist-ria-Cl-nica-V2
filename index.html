@@ -6,6 +6,9 @@
   <title>Aliva Saúde — Gestão Clínica</title>
   <link rel="manifest" href="manifest.json"/>
   <meta name="theme-color" content="#2a7a9b"/>
+  
+  <link rel="apple-touch-icon" href="icon-192.jpg">
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript"></script>
@@ -129,7 +132,6 @@
 </div>
 
 <script>
-    // --- O LINK ATUALIZADO AQUI ---
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec";
     
     let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
@@ -329,7 +331,7 @@
     async function apagarOnline(id) {
         if(!confirm("Tem a certeza de que deseja eliminar permanentemente?")) return;
         const row = document.getElementById('row-' + id);
-        if(row) row.style.display = 'none'; // Desaparece na hora
+        if(row) row.style.display = 'none';
         
         try {
             const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
@@ -342,7 +344,7 @@
             apagados.push(id); localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
         } catch(e) { 
             alert("Erro: O servidor não conseguiu apagar o ficheiro.");
-            if(row) row.style.display = 'flex'; // Volta a aparecer se der erro
+            if(row) row.style.display = 'flex';
         }
     }
 
@@ -369,7 +371,7 @@
         item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
         
         const metaObj = { ...item };
-        delete metaObj.anexos; // Não envia imagens na descrição para não rebentar os limites de texto do Drive
+        delete metaObj.anexos;
         
         try {
             const base64 = doc.output('datauristring').split(',')[1];
@@ -377,7 +379,7 @@
                 nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, 
                 pdf: base64, 
                 oldID: item.driveFileID,
-                meta: JSON.stringify(metaObj) // INJETAR METADADOS NO DRIVE
+                meta: JSON.stringify(metaObj)
             };
             
             const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
