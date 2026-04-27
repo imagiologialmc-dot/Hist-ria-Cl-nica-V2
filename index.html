@@ -129,7 +129,9 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "SUA_URL_DO_GOOGLE_SCRIPT_AQUI"; // SUBSTITUA PELA SUA URL!!!
+    // --- O LINK ATUALIZADO AQUI ---
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec";
+    
     let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
 
     window.onload = () => { atualizarFilaUI(); setInterval(syncProcess, 5000); };
@@ -142,7 +144,7 @@
         if(id === 'aba-arquivo') carregarOnline();
     }
 
-    // --- SCANNER ---
+    // --- LOGICA DE SCANNER (OpenCV) ---
     document.getElementById('camInput').addEventListener('change', function(e) {
         if(!e.target.files[0]) return;
         const r = new FileReader();
@@ -202,10 +204,10 @@
     }
     function fecharScanner() { document.getElementById('scanner-overlay').style.display='none'; }
 
-    // --- LOGICA DE DADOS ---
+    // --- LOGICA GERAL DE DADOS ---
     function finalizarRegisto() {
         const nome = document.getElementById('nome').value;
-        if(!nome) return alert("Nome obrigatório");
+        if(!nome) return alert("O Nome é obrigatório.");
         
         const getV = id => document.getElementById(id).value;
         const reg = {
@@ -227,12 +229,16 @@
             anexos: anexos
         };
         
+        let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+        cache[driveFileID || reg.idLocal] = reg;
+        localStorage.setItem('aliva_cache', JSON.stringify(cache));
+
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
         if(editandoID) fila = fila.filter(x => x.idLocal !== editandoID);
         fila.push(reg);
         localStorage.setItem('aliva_fila', JSON.stringify(fila));
         
-        resetForm(); atualizarFilaUI(); alert("Registo em fila de envio.");
+        resetForm(); atualizarFilaUI(); alert("Registo colocado na fila de envio.");
     }
 
     function atualizarFilaUI() {
@@ -251,7 +257,7 @@
 
     async function carregarOnline() {
         const lista = document.getElementById('lista-online');
-        lista.innerHTML = "A carregar...";
+        lista.innerHTML = "A carregar do Drive...";
         try {
             const res = await fetch(SCRIPT_URL);
             dbOnline = await res.json();
@@ -268,7 +274,7 @@
                     </div>
                 </div>
             `).join('');
-        } catch(e) { lista.innerHTML = "Erro ao carregar do Drive."; }
+        } catch(e) { lista.innerHTML = "Erro de ligação. Verifique a internet."; }
     }
 
     function editarReg(id, isPendente) {
@@ -277,19 +283,17 @@
             const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
             f = fila.find(x => x.idLocal == id);
         } else {
-            // RECUPERAR OS DADOS DO DRIVE DIRETAMENTE!
             const onlineDoc = dbOnline.find(x => x.id === id);
             if(onlineDoc && onlineDoc.meta) {
                 try { f = JSON.parse(onlineDoc.meta); } catch(e) {}
             }
-            // Se falhar o Drive, vai tentar procurar localmente
             if(!f) {
                 const cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
                 f = cache[id];
             }
             if(!f) {
                 f = { nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').split('_')[0].replace(/-/g,' ') : "", idLocal: Date.now(), anexos: [] };
-                alert("Nuvem e Cache vazias. Edite os campos manualmente, por favor.");
+                alert("Os metadados não foram encontrados. Alguns campos poderão estar vazios.");
             }
             driveFileID = id;
         }
@@ -318,21 +322,28 @@
         document.getElementById('sintomas').value = f.sintomas || "";
         document.getElementById('inicio').value = f.inicio || "";
         
-        // Mantém as fotos se for pendente. Se vier do PC, as fotos antigas já estão no PDF, logo anexa-se de novo ou junta-se.
         anexos = f.anexos || []; renderAnexos();
-        
         switchTab('aba-novo'); window.scrollTo(0,0);
     }
 
     async function apagarOnline(id) {
-        if(!confirm("Eliminar permanentemente do Drive?")) return;
+        if(!confirm("Tem a certeza de que deseja eliminar permanentemente?")) return;
         const row = document.getElementById('row-' + id);
-        if(row) row.remove();
+        if(row) row.style.display = 'none'; // Desaparece na hora
         
-        let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
-        apagados.push(id); localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
-
-        try { await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) }); } catch(e) {}
+        try {
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
+            const resposta = await res.json();
+            
+            if(resposta.result !== "deleted" && resposta.result !== "trashed") {
+                throw new Error("Falha no Drive");
+            }
+            let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
+            apagados.push(id); localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
+        } catch(e) { 
+            alert("Erro: O servidor não conseguiu apagar o ficheiro.");
+            if(row) row.style.display = 'flex'; // Volta a aparecer se der erro
+        }
     }
 
     async function syncProcess() {
@@ -346,7 +357,7 @@
         doc.setFontSize(14); doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
         
         doc.autoTable({
-            startY: 45, head: [['Campo', 'Info']],
+            startY: 45, head: [['Campo', 'Informação']],
             body: [
                 ['Paciente', item.nome], ['ID Proc.', item.idPaciente], ['Exame', item.exame],
                 ['Cirurgia', item.cir_det || item.cirurgia], ['Quimio/Radio', item.q_det || item.quimio],
@@ -357,9 +368,8 @@
         
         item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
         
-        // Preparar os metadados sem anexos (para não pesar o Google Drive)
         const metaObj = { ...item };
-        delete metaObj.anexos;
+        delete metaObj.anexos; // Não envia imagens na descrição para não rebentar os limites de texto do Drive
         
         try {
             const base64 = doc.output('datauristring').split(',')[1];
@@ -367,7 +377,7 @@
                 nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, 
                 pdf: base64, 
                 oldID: item.driveFileID,
-                meta: JSON.stringify(metaObj) // INJETA A INFORMAÇÃO NO DRIVE AQUI
+                meta: JSON.stringify(metaObj) // INJETAR METADADOS NO DRIVE
             };
             
             const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
@@ -376,7 +386,6 @@
                 localStorage.setItem('aliva_fila', JSON.stringify(fila)); 
                 atualizarFilaUI(); 
                 
-                // Limpa Cache Local Antiga
                 let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
                 delete cache[item.driveFileID || item.idLocal];
                 localStorage.setItem('aliva_cache', JSON.stringify(cache));
