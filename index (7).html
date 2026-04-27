@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Aliva Saúde — Gestão Clínica</title>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#2a7a9b"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript"></script>
+  <style>
+    :root { --aliva-escuro: #2a7a9b; --aliva-claro: #3dbcba; --fundo: #eaf6f6; --branco: #ffffff; --pendente: #fff3cd; --erro: #f8d7da; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--fundo); padding: 10px; color: #333; }
+    header { text-align: center; padding: 10px 0; }
+    .logo { max-width: 160px; height: auto; }
+    .nav-tabs { display: flex; gap: 5px; max-width: 800px; margin: 0 auto 15px auto; }
+    .tab-btn { flex: 1; padding: 14px; border: none; border-radius: 12px; background: white; color: var(--aliva-escuro); font-weight: bold; cursor: pointer; transition: 0.3s; }
+    .tab-btn.active { background: var(--aliva-escuro); color: white; }
+    .card { background: white; border-radius: 16px; padding: 20px; max-width: 800px; margin: 0 auto 20px auto; box-shadow: 0 8px 20px rgba(42, 122, 155, 0.08); }
+    .aba-conteudo { display: none; }
+    .aba-conteudo.active { display: block; }
+    .section-title { font-size: 0.85rem; color: var(--aliva-claro); text-transform: uppercase; margin: 20px 0 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; font-weight: bold; }
+    .input-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--aliva-escuro); font-size: 0.95rem; }
+    input, textarea { width: 100%; padding: 12px; border: 1.5px solid #d1e8e7; border-radius: 10px; font-size: 1rem; outline: none; transition: 0.3s; }
+    input:focus, textarea:focus { border-color: var(--aliva-claro); box-shadow: 0 0 5px rgba(61, 188, 186, 0.2); }
+    .radio-group { display: flex; gap: 10px; }
+    .radio-group input { display: none; }
+    .radio-group label { flex: 1; background: #fff; border: 1.5px solid #d1e8e7; padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: bold; color: #777; transition: 0.3s; }
+    .radio-group input:checked + label { background: var(--aliva-claro); border-color: var(--aliva-claro); color: white; }
+    .conditional-field { display: none; margin-top: 10px; }
+    .item-registo { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 8px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .btn-primary { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--aliva-claro); color: white; margin-top: 10px; }
+    .btn-secondary { width: 100%; padding: 12px; border: 2px solid #ccc; border-radius: 12px; font-weight: bold; cursor: pointer; background: white; color: #666; margin-top: 10px; }
+    .action-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 5px; }
+    #scanner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; flex-direction: column; z-index: 10000; }
+    #preview-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .thumb { width: 65px; height: 85px; object-fit: cover; border-radius: 6px; border: 2px solid var(--aliva-claro); cursor: pointer; }
+    .hidden { display: none !important; }
+    #edit-indicator { background:#e3f2fd; padding:12px; border-radius:10px; text-align:center; color:#0d47a1; font-weight:bold; margin-bottom:15px; border: 1px solid #bbdefb; }
+  </style>
+</head>
+<body>
+
+<header><img src="Hlogo.png" alt="Aliva Saúde" class="logo" id="mainLogo"></header>
+
+<div class="nav-tabs">
+  <button id="tab-novo" class="tab-btn active" onclick="switchTab('aba-novo')">Ficha Clínica</button>
+  <button id="tab-arquivo" class="tab-btn" onclick="switchTab('aba-arquivo')">Arquivo Digital</button>
+</div>
+
+<div id="aba-novo" class="aba-conteudo active">
+  <div class="card">
+    <div id="edit-indicator" class="hidden">✏️ MODO DE EDIÇÃO ATIVO</div>
+    
+    <div class="section-title">Dados do Paciente</div>
+    <div class="input-group"><label>Nome Completo</label><input type="text" id="nome"></div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div class="input-group"><label>Nascimento</label><input type="date" id="dataNasc"></div>
+        <div class="input-group"><label>ID / Processo</label><input type="text" id="idPaciente"></div>
+    </div>
+    <div class="input-group"><label>Exame Solicitado</label><input type="text" id="exame"></div>
+    
+    <div class="section-title">Questionário Clínico</div>
+    <div class="input-group"><label>Hipótese Diagnóstica</label><textarea id="hipotese" rows="2"></textarea></div>
+
+    <div class="input-group">
+      <label>Cirurgia Prévia?</label>
+      <div class="radio-group">
+        <input type="radio" name="cirurgia" id="cn" value="Não" checked onclick="toggleC('gc', false)"><label for="cn">Não</label>
+        <input type="radio" name="cirurgia" id="cs" value="Sim" onclick="toggleC('gc', true)"><label for="cs">Sim</label>
+      </div>
+      <div id="gc" class="conditional-field"><input type="text" id="cir_det" placeholder="Qual e quando?"></div>
+    </div>
+
+    <div class="input-group">
+      <label>Quimio ou Radioterapia?</label>
+      <div class="radio-group">
+        <input type="radio" name="quimio" id="qn" value="Não" checked onclick="toggleC('gq', false)"><label for="qn">Não</label>
+        <input type="radio" name="quimio" id="qs" value="Sim" onclick="toggleC('gq', true)"><label for="qs">Sim</label>
+      </div>
+      <div id="gq" class="conditional-field"><input type="text" id="q_det" placeholder="Detalhes das sessões"></div>
+    </div>
+
+    <div class="input-group">
+      <label>Trauma Local?</label>
+      <div class="radio-group">
+        <input type="radio" name="trauma" id="tn" value="Não" checked onclick="toggleC('gt', false)"><label for="tn">Não</label>
+        <input type="radio" name="trauma" id="ts" value="Sim" onclick="toggleC('gt', true)"><label for="ts">Sim</label>
+      </div>
+      <div id="gt" class="conditional-field"><input type="text" id="t_det" placeholder="Descreva o trauma"></div>
+    </div>
+
+    <div class="input-group"><label>Febre ou Outros Sintomas?</label><input type="text" id="sintomas"></div>
+    <div class="input-group"><label>Início dos Sintomas (Tempo)</label><input type="text" id="inicio"></div>
+
+    <div class="section-title">Anexos</div>
+    <input type="file" id="camInput" accept="image/*" capture="environment">
+    <div id="preview-container"></div>
+
+    <button class="btn-primary" onclick="finalizarRegisto()">Finalizar e Sincronizar</button>
+    <button class="btn-secondary hidden" id="btnCancelar" onclick="resetForm()">Sair sem Guardar</button>
+  </div>
+
+  <div class="card hidden" id="container-pendentes">
+    <div style="font-size:0.9rem; color:#666; font-weight:bold; margin-bottom:10px;">⏳ Pendentes de Envio</div>
+    <div id="lista-pendentes"></div>
+  </div>
+</div>
+
+<div id="aba-arquivo" class="aba-conteudo">
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h2 style="color:var(--aliva-escuro)">Arquivo Digital</h2>
+        <button onclick="carregarOnline()" class="action-btn">🔄</button>
+    </div>
+    <div id="lista-online">A carregar...</div>
+  </div>
+</div>
+
+<div id="scanner-overlay">
+    <div id="scanner-ui-cont" style="position:relative; flex:1; display:flex; align-items:center; justify-content:center; touch-action:none;"><canvas id="canvas-ui"></canvas></div>
+    <div style="display:flex; padding:20px; gap:10px; background:#1a1a1a;">
+        <button class="btn-primary" style="background:#444; margin:0" onclick="fecharScanner()">Sair</button>
+        <button class="btn-primary" style="margin:0" onclick="processarScan()">Realçar Documento</button>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec";
+    let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null;
+
+    window.onload = () => { atualizarFilaUI(); setInterval(syncProcess, 5000); };
+
+    function toggleC(id, s) { document.getElementById(id).style.display = s ? 'block' : 'none'; }
+    function switchTab(id) {
+        document.querySelectorAll('.aba-conteudo, .tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('tab-' + id.split('-')[1]).classList.add('active');
+        if(id === 'aba-arquivo') carregarOnline();
+    }
+
+    // --- SCANNER ---
+    document.getElementById('camInput').addEventListener('change', function(e) {
+        if(!e.target.files[0]) return;
+        const r = new FileReader();
+        r.onload = ev => { const i = new Image(); i.onload = () => abrirScanner(i); i.src = ev.target.result; };
+        r.readAsDataURL(e.target.files[0]);
+    });
+
+    function abrirScanner(img) {
+        imgTemp = img; document.getElementById('scanner-overlay').style.display = 'flex';
+        const canvas = document.getElementById('canvas-ui');
+        const maxW = window.innerWidth * 0.95, maxH = window.innerHeight * 0.75;
+        escalaVisual = Math.min(maxW / img.width, maxH / img.height);
+        canvas.width = img.width * escalaVisual; canvas.height = img.height * escalaVisual;
+        const w = canvas.width, h = canvas.height;
+        pontos = [{x:w*0.1,y:h*0.1},{x:w*0.9,y:h*0.1},{x:w*0.9,y:h*0.9},{x:w*0.1,y:h*0.9}];
+        desenharUI(); 
+        const rect = canvas.getBoundingClientRect();
+        canvas.ontouchstart = canvas.onmousedown = e => {
+            const t = e.touches ? e.touches[0] : e;
+            const px = t.clientX - rect.left, py = t.clientY - rect.top;
+            let pi = null; pontos.forEach((pt, i) => { if(Math.hypot(pt.x-px, pt.y-py) < 35) pi = i; });
+            if(pi !== null) {
+                window.ontouchmove = window.onmousemove = ev => {
+                    const tt = ev.touches ? ev.touches[0] : ev;
+                    pontos[pi] = {x: tt.clientX - rect.left, y: tt.clientY - rect.top};
+                    desenharUI();
+                };
+                window.ontouchend = window.onmouseup = () => window.ontouchmove = window.onmousemove = null;
+            }
+        };
+    }
+
+    function desenharUI() {
+        const ctx = document.getElementById('canvas-ui').getContext('2d');
+        ctx.drawImage(imgTemp, 0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.strokeStyle = "#3dbcba"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(pontos[0].x, pontos[0].y);
+        pontos.forEach(p => ctx.lineTo(p.x, p.y)); ctx.closePath(); ctx.stroke();
+        ctx.fillStyle = "#3dbcba"; pontos.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, Math.PI*2); ctx.fill(); });
+    }
+
+    function processarScan() {
+        const src = cv.imread(imgTemp);
+        let ptsR = []; pontos.forEach(p => { ptsR.push(p.x/escalaVisual); ptsR.push(p.y/escalaVisual); });
+        let srcT = cv.matFromArray(4, 1, cv.CV_32FC2, ptsR);
+        const oW = 1000, oH = 1400;
+        let dstT = cv.matFromArray(4, 1, cv.CV_32FC2, [0,0, oW,0, oW,oH, 0,oH]);
+        let M = cv.getPerspectiveTransform(srcT, dstT), dst = new cv.Mat();
+        cv.warpPerspective(src, dst, M, new cv.Size(oW, oH));
+        dst.convertTo(dst, -1, 1.4, 10); 
+        const cOut = document.createElement('canvas'); cv.imshow(cOut, dst);
+        anexos.push(cOut.toDataURL('image/jpeg', 0.8));
+        renderAnexos(); fecharScanner(); src.delete(); dst.delete(); M.delete();
+    }
+
+    function renderAnexos() {
+        document.getElementById('preview-container').innerHTML = anexos.map((img, i) => `<img src="${img}" class="thumb" onclick="if(confirm('Apagar imagem?')){anexos.splice(${i},1);renderAnexos();}">`).join('');
+    }
+    function fecharScanner() { document.getElementById('scanner-overlay').style.display='none'; }
+
+    // --- LOGICA DE DADOS ---
+    function finalizarRegisto() {
+        const nome = document.getElementById('nome').value;
+        if(!nome) return alert("Nome obrigatório");
+        
+        const reg = {
+            idLocal: editandoID || Date.now(),
+            driveFileID: driveFileID, 
+            nome: nome,
+            dataNasc: document.getElementById('dataNasc').value,
+            idPaciente: document.getElementById('idPaciente').value,
+            exame: document.getElementById('exame').value,
+            hipotese: document.getElementById('hipotese').value,
+            cirurgia: document.querySelector('input[name="cirurgia"]:checked').value,
+            cir_det: document.getElementById('cir_det').value,
+            quimio: document.querySelector('input[name="quimio"]:checked').value,
+            q_det: document.getElementById('q_det').value,
+            trauma: document.querySelector('input[name="trauma"]:checked').value,
+            t_det: document.getElementById('t_det').value,
+            sintomas: document.getElementById('sintomas').value,
+            inicio: document.getElementById('inicio').value,
+            anexos: anexos
+        };
+        
+        // Guardar metadados para futura edição (Cache Local)
+        let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+        cache[driveFileID || reg.idLocal] = reg;
+        localStorage.setItem('aliva_cache', JSON.stringify(cache));
+
+        let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+        if(editandoID) fila = fila.filter(x => x.idLocal !== editandoID);
+        fila.push(reg);
+        localStorage.setItem('aliva_fila', JSON.stringify(fila));
+        resetForm(); atualizarFilaUI(); alert("Registo em fila de envio.");
+    }
+
+    function atualizarFilaUI() {
+        const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+        const cont = document.getElementById('container-pendentes');
+        const lista = document.getElementById('lista-pendentes');
+        if(fila.length === 0) { cont.classList.add('hidden'); return; }
+        cont.classList.remove('hidden');
+        lista.innerHTML = fila.map(f => `
+            <div class="item-registo" style="background:var(--pendente)">
+                <div><b>${f.nome}</b><br><small>A sincronizar...</small></div>
+                <button class="action-btn" onclick="editarReg('${f.idLocal}', true)">✏️</button>
+            </div>
+        `).join('');
+    }
+
+    async function carregarOnline() {
+        const lista = document.getElementById('lista-online');
+        lista.innerHTML = "A carregar...";
+        try {
+            const res = await fetch(SCRIPT_URL);
+            const data = await res.json();
+            const apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
+            const filtrados = data.filter(f => !apagados.includes(f.id));
+            
+            lista.innerHTML = filtrados.map(f => `
+                <div class="item-registo" id="row-${f.id}">
+                    <div><b>${f.name}</b><br><small>${new Date(f.date).toLocaleDateString()}</small></div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="action-btn" onclick="editarReg('${f.id}', false)">✏️</button>
+                        <button class="action-btn" onclick="apagarOnline('${f.id}')">🗑️</button>
+                        <a href="${f.url}" target="_blank" class="action-btn">👁️</a>
+                    </div>
+                </div>
+            `).join('');
+        } catch(e) { lista.innerHTML = "Erro ao carregar."; }
+    }
+
+    function editarReg(id, isPendente) {
+        let f;
+        if(isPendente) {
+            const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+            f = fila.find(x => x.idLocal == id);
+        } else {
+            const cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+            f = cache[id];
+            if(!f) {
+                // Preenchimento básico se a cache local foi limpa
+                f = { nome: "Processo do Drive", idLocal: Date.now(), driveFileID: id, anexos: [] };
+                alert("Dados clínicos não encontrados no dispositivo. Edite os campos necessários.");
+            }
+        }
+        
+        if(!f) return;
+        editandoID = f.idLocal; driveFileID = f.driveFileID || id;
+        
+        document.getElementById('edit-indicator').classList.remove('hidden');
+        document.getElementById('btnCancelar').classList.remove('hidden');
+        
+        document.getElementById('nome').value = f.nome || "";
+        document.getElementById('dataNasc').value = f.dataNasc || "";
+        document.getElementById('idPaciente').value = f.idPaciente || "";
+        document.getElementById('exame').value = f.exame || "";
+        document.getElementById('hipotese').value = f.hipotese || "";
+        
+        if(f.cirurgia === "Sim") { document.getElementById('cs').checked = true; toggleC('gc', true); document.getElementById('cir_det').value = f.cir_det || ""; }
+        else { document.getElementById('cn').checked = true; toggleC('gc', false); }
+        
+        if(f.quimio === "Sim") { document.getElementById('qs').checked = true; toggleC('gq', true); document.getElementById('q_det').value = f.q_det || ""; }
+        else { document.getElementById('qn').checked = true; toggleC('gq', false); }
+        
+        if(f.trauma === "Sim") { document.getElementById('ts').checked = true; toggleC('gt', true); document.getElementById('t_det').value = f.t_det || ""; }
+        else { document.getElementById('tn').checked = true; toggleC('gt', false); }
+        
+        document.getElementById('sintomas').value = f.sintomas || "";
+        document.getElementById('inicio').value = f.inicio || "";
+        anexos = f.anexos || []; renderAnexos();
+        
+        switchTab('aba-novo'); window.scrollTo(0,0);
+    }
+
+    async function apagarOnline(id) {
+        if(!confirm("Eliminar permanentemente?")) return;
+        const row = document.getElementById('row-' + id);
+        if(row) row.remove();
+        
+        let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
+        apagados.push(id);
+        localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
+
+        try {
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
+        } catch(e) {}
+    }
+
+    async function syncProcess() {
+        let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+        if(fila.length === 0) return;
+        const item = fila[0];
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e){}
+        doc.setFontSize(14); doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
+        doc.autoTable({
+            startY: 45, head: [['Campo', 'Info']],
+            body: [
+                ['Paciente', item.nome], ['ID Proc.', item.idPaciente], ['Exame', item.exame],
+                ['Cirurgia', item.cir_det || item.cirurgia], ['Quimio/Radio', item.q_det || item.quimio],
+                ['Trauma', item.t_det || item.trauma], ['Sintomas', item.sintomas], ['Início', item.inicio]
+            ],
+            theme: 'striped', headStyles: { fillColor: [42, 122, 155] }
+        });
+        item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
+        try {
+            const base64 = doc.output('datauristring').split(',')[1];
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, pdf: base64, oldID: item.driveFileID }) });
+            if(res.ok) { fila.shift(); localStorage.setItem('aliva_fila', JSON.stringify(fila)); atualizarFilaUI(); }
+        } catch(e) {}
+    }
+
+    function resetForm() {
+        editandoID = null; driveFileID = null;
+        document.getElementById('edit-indicator').classList.add('hidden');
+        document.getElementById('btnCancelar').classList.add('hidden');
+        document.querySelectorAll('input[type="text"], input[type="date"], textarea').forEach(i => i.value = "");
+        document.getElementById('cn').checked = true; toggleC('gc', false);
+        document.getElementById('qn').checked = true; toggleC('gq', false);
+        document.getElementById('tn').checked = true; toggleC('gt', false);
+        anexos = []; renderAnexos();
+    }
+</script>
+</body>
+</html>
