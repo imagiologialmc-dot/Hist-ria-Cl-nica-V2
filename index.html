@@ -129,8 +129,8 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec";
-    let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null;
+    const SCRIPT_URL = "SUA_URL_DO_GOOGLE_SCRIPT_AQUI"; // SUBSTITUA PELA SUA URL!!!
+    let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
 
     window.onload = () => { atualizarFilaUI(); setInterval(syncProcess, 5000); };
 
@@ -207,34 +207,31 @@
         const nome = document.getElementById('nome').value;
         if(!nome) return alert("Nome obrigatório");
         
+        const getV = id => document.getElementById(id).value;
         const reg = {
             idLocal: editandoID || Date.now(),
             driveFileID: driveFileID, 
             nome: nome,
-            dataNasc: document.getElementById('dataNasc').value,
-            idPaciente: document.getElementById('idPaciente').value,
-            exame: document.getElementById('exame').value,
-            hipotese: document.getElementById('hipotese').value,
+            dataNasc: getV('dataNasc'),
+            idPaciente: getV('idPaciente'),
+            exame: getV('exame'),
+            hipotese: getV('hipotese'),
             cirurgia: document.querySelector('input[name="cirurgia"]:checked').value,
-            cir_det: document.getElementById('cir_det').value,
+            cir_det: getV('cir_det'),
             quimio: document.querySelector('input[name="quimio"]:checked').value,
-            q_det: document.getElementById('q_det').value,
+            q_det: getV('q_det'),
             trauma: document.querySelector('input[name="trauma"]:checked').value,
-            t_det: document.getElementById('t_det').value,
-            sintomas: document.getElementById('sintomas').value,
-            inicio: document.getElementById('inicio').value,
+            t_det: getV('t_det'),
+            sintomas: getV('sintomas'),
+            inicio: getV('inicio'),
             anexos: anexos
         };
         
-        // Guardar metadados para futura edição (Cache Local)
-        let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
-        cache[driveFileID || reg.idLocal] = reg;
-        localStorage.setItem('aliva_cache', JSON.stringify(cache));
-
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
         if(editandoID) fila = fila.filter(x => x.idLocal !== editandoID);
         fila.push(reg);
         localStorage.setItem('aliva_fila', JSON.stringify(fila));
+        
         resetForm(); atualizarFilaUI(); alert("Registo em fila de envio.");
     }
 
@@ -257,9 +254,9 @@
         lista.innerHTML = "A carregar...";
         try {
             const res = await fetch(SCRIPT_URL);
-            const data = await res.json();
+            dbOnline = await res.json();
             const apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
-            const filtrados = data.filter(f => !apagados.includes(f.id));
+            const filtrados = dbOnline.filter(f => !apagados.includes(f.id));
             
             lista.innerHTML = filtrados.map(f => `
                 <div class="item-registo" id="row-${f.id}">
@@ -267,30 +264,38 @@
                     <div style="display:flex; gap:10px;">
                         <button class="action-btn" onclick="editarReg('${f.id}', false)">✏️</button>
                         <button class="action-btn" onclick="apagarOnline('${f.id}')">🗑️</button>
-                        <a href="${f.url}" target="_blank" class="action-btn">👁️</a>
+                        <a href="${f.url}" target="_blank" class="action-btn" style="text-decoration:none;">👁️</a>
                     </div>
                 </div>
             `).join('');
-        } catch(e) { lista.innerHTML = "Erro ao carregar."; }
+        } catch(e) { lista.innerHTML = "Erro ao carregar do Drive."; }
     }
 
     function editarReg(id, isPendente) {
-        let f;
+        let f = null;
         if(isPendente) {
             const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
             f = fila.find(x => x.idLocal == id);
         } else {
-            const cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
-            f = cache[id];
-            if(!f) {
-                // Preenchimento básico se a cache local foi limpa
-                f = { nome: "Processo do Drive", idLocal: Date.now(), driveFileID: id, anexos: [] };
-                alert("Dados clínicos não encontrados no dispositivo. Edite os campos necessários.");
+            // RECUPERAR OS DADOS DO DRIVE DIRETAMENTE!
+            const onlineDoc = dbOnline.find(x => x.id === id);
+            if(onlineDoc && onlineDoc.meta) {
+                try { f = JSON.parse(onlineDoc.meta); } catch(e) {}
             }
+            // Se falhar o Drive, vai tentar procurar localmente
+            if(!f) {
+                const cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+                f = cache[id];
+            }
+            if(!f) {
+                f = { nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').split('_')[0].replace(/-/g,' ') : "", idLocal: Date.now(), anexos: [] };
+                alert("Nuvem e Cache vazias. Edite os campos manualmente, por favor.");
+            }
+            driveFileID = id;
         }
         
         if(!f) return;
-        editandoID = f.idLocal; driveFileID = f.driveFileID || id;
+        editandoID = f.idLocal || Date.now();
         
         document.getElementById('edit-indicator').classList.remove('hidden');
         document.getElementById('btnCancelar').classList.remove('hidden');
@@ -312,33 +317,34 @@
         
         document.getElementById('sintomas').value = f.sintomas || "";
         document.getElementById('inicio').value = f.inicio || "";
+        
+        // Mantém as fotos se for pendente. Se vier do PC, as fotos antigas já estão no PDF, logo anexa-se de novo ou junta-se.
         anexos = f.anexos || []; renderAnexos();
         
         switchTab('aba-novo'); window.scrollTo(0,0);
     }
 
     async function apagarOnline(id) {
-        if(!confirm("Eliminar permanentemente?")) return;
+        if(!confirm("Eliminar permanentemente do Drive?")) return;
         const row = document.getElementById('row-' + id);
         if(row) row.remove();
         
         let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
-        apagados.push(id);
-        localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
+        apagados.push(id); localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
 
-        try {
-            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
-        } catch(e) {}
+        try { await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) }); } catch(e) {}
     }
 
     async function syncProcess() {
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
         if(fila.length === 0) return;
         const item = fila[0];
+        
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e){}
         doc.setFontSize(14); doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
+        
         doc.autoTable({
             startY: 45, head: [['Campo', 'Info']],
             body: [
@@ -348,11 +354,33 @@
             ],
             theme: 'striped', headStyles: { fillColor: [42, 122, 155] }
         });
+        
         item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
+        
+        // Preparar os metadados sem anexos (para não pesar o Google Drive)
+        const metaObj = { ...item };
+        delete metaObj.anexos;
+        
         try {
             const base64 = doc.output('datauristring').split(',')[1];
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, pdf: base64, oldID: item.driveFileID }) });
-            if(res.ok) { fila.shift(); localStorage.setItem('aliva_fila', JSON.stringify(fila)); atualizarFilaUI(); }
+            const payload = { 
+                nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, 
+                pdf: base64, 
+                oldID: item.driveFileID,
+                meta: JSON.stringify(metaObj) // INJETA A INFORMAÇÃO NO DRIVE AQUI
+            };
+            
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+            if(res.ok) { 
+                fila.shift(); 
+                localStorage.setItem('aliva_fila', JSON.stringify(fila)); 
+                atualizarFilaUI(); 
+                
+                // Limpa Cache Local Antiga
+                let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+                delete cache[item.driveFileID || item.idLocal];
+                localStorage.setItem('aliva_cache', JSON.stringify(cache));
+            }
         } catch(e) {}
     }
 
@@ -365,6 +393,7 @@
         document.getElementById('qn').checked = true; toggleC('gq', false);
         document.getElementById('tn').checked = true; toggleC('gt', false);
         anexos = []; renderAnexos();
+        window.scrollTo(0,0);
     }
 </script>
 </body>
