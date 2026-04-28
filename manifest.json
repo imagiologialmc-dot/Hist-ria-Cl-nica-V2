@@ -1,6 +1,6 @@
 {
   "name": "Aliva Saúde - Gestão",
-  "short_name": "Aliva App",
+  "short_name": "Info. Clínica",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#eaf6f6",
