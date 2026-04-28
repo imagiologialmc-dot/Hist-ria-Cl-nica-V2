@@ -101,7 +101,14 @@
     <div class="input-group"><label>Início dos Sintomas (Tempo)</label><input type="text" id="inicio"></div>
 
     <div class="section-title">Anexos</div>
-    <input type="file" id="camInput" accept="image/*" capture="environment">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+        <button class="btn-secondary" style="margin:0; border-color:var(--aliva-claro); color:var(--aliva-escuro);" onclick="document.getElementById('camInputScan').click()">📸 Digitalizar</button>
+        <button class="btn-secondary" style="margin:0; border-color:var(--aliva-claro); color:var(--aliva-escuro);" onclick="document.getElementById('camInputDirect').click()">📎 Anexar Direto</button>
+    </div>
+    
+    <input type="file" id="camInputScan" accept="image/*" capture="environment" class="hidden">
+    <input type="file" id="camInputDirect" accept="image/*" class="hidden">
+    
     <div id="preview-container"></div>
 
     <button id="btnFinalizar" class="btn-primary" onclick="finalizarRegisto()">Finalizar e Sincronizar</button>
@@ -136,7 +143,7 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyg3ZXQLgUGkGPI4-7TiWtaAb1bMD95j_M3WSuhQQoG5DYvdOFmII5Ztf85Nf_Rqpo/exec";
     
     let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
-    let isSyncing = false; // BLOQUEIO PARA EVITAR DUPLICADOS
+    let isSyncing = false;
 
     window.onload = () => { atualizarFilaUI(); setInterval(syncProcess, 5000); };
 
@@ -148,10 +155,18 @@
         if(id === 'aba-arquivo') carregarOnline();
     }
 
-    document.getElementById('camInput').addEventListener('change', function(e) {
+    // --- LOGICA DE ANEXOS ---
+    document.getElementById('camInputScan').addEventListener('change', function(e) {
         if(!e.target.files[0]) return;
         const r = new FileReader();
         r.onload = ev => { const i = new Image(); i.onload = () => abrirScanner(i); i.src = ev.target.result; };
+        r.readAsDataURL(e.target.files[0]);
+    });
+
+    document.getElementById('camInputDirect').addEventListener('change', function(e) {
+        if(!e.target.files[0]) return;
+        const r = new FileReader();
+        r.onload = ev => { anexos.push(ev.target.result); renderAnexos(); };
         r.readAsDataURL(e.target.files[0]);
     });
 
@@ -207,11 +222,11 @@
     }
     function fecharScanner() { document.getElementById('scanner-overlay').style.display='none'; }
 
+    // --- LOGICA GERAL ---
     function finalizarRegisto() {
         const nome = document.getElementById('nome').value;
         if(!nome) return alert("O Nome é obrigatório.");
-        
-        document.getElementById('btnFinalizar').disabled = true; // EVITA CLIQUE DUPLO
+        document.getElementById('btnFinalizar').disabled = true;
         
         const getV = id => document.getElementById(id).value;
         const reg = {
@@ -268,7 +283,6 @@
             dbOnline = await res.json();
             const apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
             const filtrados = dbOnline.filter(f => !apagados.includes(f.id));
-            
             lista.innerHTML = filtrados.map(f => `
                 <div class="item-registo" id="row-${f.id}">
                     <div><b>${f.name}</b><br><small>${new Date(f.date).toLocaleDateString()}</small></div>
@@ -279,15 +293,18 @@
                     </div>
                 </div>
             `).join('');
-        } catch(e) { lista.innerHTML = "Erro de ligação. Verifique a internet."; }
+        } catch(e) { lista.innerHTML = "Erro de ligação."; }
     }
 
     function editarReg(id, isPendente) {
         let f = null;
+        let isOnlineEdit = false;
         if(isPendente) {
             const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
             f = fila.find(x => x.idLocal == id);
+            driveFileID = f.driveFileID || null; 
         } else {
+            isOnlineEdit = true;
             const onlineDoc = dbOnline.find(x => x.id === id);
             if(onlineDoc && onlineDoc.meta) {
                 try { f = JSON.parse(onlineDoc.meta); } catch(e) {}
@@ -296,20 +313,28 @@
                 const cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
                 f = cache[id];
             }
-            if(!f) {
-                f = { nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').split('_')[0].replace(/-/g,' ') : "", idLocal: Date.now(), anexos: [] };
-                alert("Os metadados não foram encontrados. Alguns campos poderão estar vazios.");
-            }
-            driveFileID = id;
+            if(!f) f = { nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').split('_')[0].replace(/-/g,' ') : "", idLocal: Date.now(), anexos: [] };
+            
+            alert("🔒 PROTEÇÃO DE DADOS:\nComo esta ficha já foi arquivada, as fotos originais estão seladas no PDF.\n\nPara não as perder, será criada uma Adenda. O PDF antigo será mantido intacto.");
+            driveFileID = null; 
         }
         
         if(!f) return;
-        editandoID = f.idLocal || Date.now();
-        
-        document.getElementById('edit-indicator').classList.remove('hidden');
+        editandoID = isOnlineEdit ? Date.now() : (f.idLocal || Date.now());
+        const ind = document.getElementById('edit-indicator');
+        ind.classList.remove('hidden');
+        if(isOnlineEdit) {
+            ind.innerHTML = "📝 MODO DE ADENDA (O PDF original não será apagado)";
+            ind.style.background = "#fff3cd"; ind.style.color = "#856404"; ind.style.borderColor = "#ffeeba";
+        } else {
+            ind.innerHTML = "✏️ MODO DE EDIÇÃO ATIVO";
+            ind.style.background = "#e3f2fd"; ind.style.color = "#0d47a1"; ind.style.borderColor = "#bbdefb";
+        }
         document.getElementById('btnCancelar').classList.remove('hidden');
         
-        document.getElementById('nome').value = f.nome || "";
+        let nomeFinal = f.nome || "";
+        if (isOnlineEdit && !nomeFinal.includes("(Adenda)")) nomeFinal += " (Adenda)";
+        document.getElementById('nome').value = nomeFinal;
         document.getElementById('dataNasc').value = f.dataNasc || "";
         document.getElementById('idPaciente').value = f.idPaciente || "";
         document.getElementById('exame').value = f.exame || "";
@@ -317,54 +342,38 @@
         
         if(f.cirurgia === "Sim") { document.getElementById('cs').checked = true; toggleC('gc', true); document.getElementById('cir_det').value = f.cir_det || ""; }
         else { document.getElementById('cn').checked = true; toggleC('gc', false); }
-        
         if(f.quimio === "Sim") { document.getElementById('qs').checked = true; toggleC('gq', true); document.getElementById('q_det').value = f.q_det || ""; }
         else { document.getElementById('qn').checked = true; toggleC('gq', false); }
-        
         if(f.trauma === "Sim") { document.getElementById('ts').checked = true; toggleC('gt', true); document.getElementById('t_det').value = f.t_det || ""; }
         else { document.getElementById('tn').checked = true; toggleC('gt', false); }
         
         document.getElementById('sintomas').value = f.sintomas || "";
         document.getElementById('inicio').value = f.inicio || "";
-        
         anexos = f.anexos || []; renderAnexos();
         switchTab('aba-novo'); window.scrollTo(0,0);
     }
 
     async function apagarOnline(id) {
-        if(!confirm("Tem a certeza de que deseja eliminar permanentemente?")) return;
+        if(!confirm("Eliminar permanentemente?")) return;
         const row = document.getElementById('row-' + id);
         if(row) row.style.display = 'none';
-        
         try {
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
-            const resposta = await res.json();
-            
-            if(resposta.result !== "deleted" && resposta.result !== "trashed") {
-                throw new Error("Falha no Drive");
-            }
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
             let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
             apagados.push(id); localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
-        } catch(e) { 
-            alert("Erro: O servidor não conseguiu apagar o ficheiro.");
-            if(row) row.style.display = 'flex';
-        }
+        } catch(e) { if(row) row.style.display = 'flex'; }
     }
 
     async function syncProcess() {
-        if (isSyncing) return; // SE JÁ ESTIVER A ENVIAR, NÃO COMEÇA OUTRO
-        
+        if (isSyncing) return;
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
         if(fila.length === 0) return;
-        
-        isSyncing = true; // ATIVA O BLOQUEIO
+        isSyncing = true;
         const item = fila[0];
-        
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e){}
         doc.setFontSize(14); doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
-        
         doc.autoTable({
             startY: 45, head: [['Campo', 'Informação']],
             body: [
@@ -374,36 +383,20 @@
             ],
             theme: 'striped', headStyles: { fillColor: [42, 122, 155] }
         });
-        
         item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
-        
-        const metaObj = { ...item };
-        delete metaObj.anexos;
-        
+        const metaObj = { ...item }; delete metaObj.anexos;
         try {
             const base64 = doc.output('datauristring').split(',')[1];
-            const payload = { 
-                nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, 
-                pdf: base64, 
-                oldID: item.driveFileID,
-                meta: JSON.stringify(metaObj)
-            };
-            
+            const payload = { nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, pdf: base64, oldID: item.driveFileID, meta: JSON.stringify(metaObj) };
             const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
             if(res.ok) { 
-                fila.shift(); 
-                localStorage.setItem('aliva_fila', JSON.stringify(fila)); 
+                fila.shift(); localStorage.setItem('aliva_fila', JSON.stringify(fila)); 
                 atualizarFilaUI(); 
-                
                 let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
                 delete cache[item.driveFileID || item.idLocal];
                 localStorage.setItem('aliva_cache', JSON.stringify(cache));
             }
-        } catch(e) {
-            console.error("Erro na sincronização:", e);
-        } finally {
-            isSyncing = false; // LIBERTA O BLOQUEIO
-        }
+        } catch(e) {} finally { isSyncing = false; }
     }
 
     function resetForm() {
@@ -414,8 +407,7 @@
         document.getElementById('cn').checked = true; toggleC('gc', false);
         document.getElementById('qn').checked = true; toggleC('gq', false);
         document.getElementById('tn').checked = true; toggleC('gt', false);
-        anexos = []; renderAnexos();
-        window.scrollTo(0,0);
+        anexos = []; renderAnexos(); window.scrollTo(0,0);
     }
 </script>
 </body>
