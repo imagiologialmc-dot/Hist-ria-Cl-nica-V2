@@ -372,22 +372,41 @@
         const item = fila[0];
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        
         try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e){}
         doc.setFontSize(14); doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
+        
         doc.autoTable({
-            startY: 45, head: [['Campo', 'Informação']],
+            startY: 45, 
+            head: [['Campo', 'Informação']],
             body: [
-                ['Paciente', item.nome], ['ID Proc.', item.idPaciente], ['Exame', item.exame],
-                ['Cirurgia', item.cir_det || item.cirurgia], ['Quimio/Radio', item.q_det || item.quimio],
-                ['Trauma', item.t_det || item.trauma], ['Sintomas', item.sintomas], ['Início', item.inicio]
+                ['Paciente', item.nome], 
+                ['ID Proc.', item.idPaciente], 
+                ['Exame', item.exame],
+                ['Hipótese Diag.', item.hipotese || ""], // <- Campo adicionado aqui
+                ['Cirurgia', item.cir_det || item.cirurgia], 
+                ['Quimio/Radio', item.q_det || item.quimio],
+                ['Trauma', item.t_det || item.trauma], 
+                ['Sintomas', item.sintomas], 
+                ['Início', item.inicio]
             ],
-            theme: 'striped', headStyles: { fillColor: [42, 122, 155] }
+            theme: 'striped', 
+            headStyles: { fillColor: [42, 122, 155] },
+            styles: { overflow: 'linebreak' }, // Evita que textos longos (como a hipótese) cortem no PDF
+            columnStyles: { 1: { cellWidth: 130 } } // Dá mais espaço horizontal para a coluna das descrições
         });
+        
         item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
         const metaObj = { ...item }; delete metaObj.anexos;
+        
         try {
             const base64 = doc.output('datauristring').split(',')[1];
-            const payload = { nome: `Ficha_${item.nome.replace(/\s/g,'-')}`, pdf: base64, oldID: item.driveFileID, meta: JSON.stringify(metaObj) };
+            
+            // Remove acentos e caracteres especiais do nome para não falhar no Google Drive
+            const nomeLimpo = item.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9-_]/g, "-");
+            const nomeFicheiro = `Ficha_${nomeLimpo}`;
+            
+            const payload = { nome: nomeFicheiro, pdf: base64, oldID: item.driveFileID, meta: JSON.stringify(metaObj) };
             const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
             if(res.ok) { 
                 fila.shift(); localStorage.setItem('aliva_fila', JSON.stringify(fila)); 
@@ -396,7 +415,11 @@
                 delete cache[item.driveFileID || item.idLocal];
                 localStorage.setItem('aliva_cache', JSON.stringify(cache));
             }
-        } catch(e) {} finally { isSyncing = false; }
+        } catch(e) {
+            console.error("Erro na sincronização:", e);
+        } finally { 
+            isSyncing = false; 
+        }
     }
 
     function resetForm() {
