@@ -132,11 +132,13 @@
 </div>
 
 <div id="scanner-overlay">
-    <div id="scanner-ui-cont" style="position:relative; flex:1; display:flex; align-items:center; justify-content:center; touch-action:none;"><canvas id="canvas-ui"></canvas></div>
-    <div style="display:flex; padding:20px; gap:10px; background:#1a1a1a; justify-content: space-between;">
-        <button class="btn-primary" style="background:#444; margin:0; flex: 1;" onclick="fecharScanner()">Sair</button>
-        <button class="btn-primary" style="background:var(--aliva-escuro); margin:0; flex: 1;" onclick="rodarImagem90()">🔄 Rodar 90°</button>
-        <button class="btn-primary" style="margin:0; flex: 1.5;" onclick="processarScan()">Realçar Documento</button>
+    <div id="scanner-ui-cont" style="position:relative; flex:1; display:flex; align-items:center; justify-content:center; touch-action:none; overflow:hidden;">
+        <canvas id="canvas-ui"></canvas>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; padding:15px; background:#1a1a1a; padding-bottom: max(15px, env(safe-area-inset-bottom));">
+        <button class="btn-primary" style="background:#444; margin:0;" onclick="fecharScanner()">Sair</button>
+        <button class="btn-primary" style="background:var(--aliva-escuro); margin:0;" onclick="rodarImagem90()">🔄 Rodar 90°</button>
+        <button class="btn-primary" style="margin:0; grid-column: span 2;" onclick="processarScan()">Realçar Documento</button>
     </div>
 </div>
 
