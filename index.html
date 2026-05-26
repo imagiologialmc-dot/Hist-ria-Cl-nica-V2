@@ -133,9 +133,10 @@
 
 <div id="scanner-overlay">
     <div id="scanner-ui-cont" style="position:relative; flex:1; display:flex; align-items:center; justify-content:center; touch-action:none;"><canvas id="canvas-ui"></canvas></div>
-    <div style="display:flex; padding:20px; gap:10px; background:#1a1a1a;">
-        <button class="btn-primary" style="background:#444; margin:0" onclick="fecharScanner()">Sair</button>
-        <button class="btn-primary" style="margin:0" onclick="processarScan()">Realçar Documento</button>
+    <div style="display:flex; padding:20px; gap:10px; background:#1a1a1a; justify-content: space-between;">
+        <button class="btn-primary" style="background:#444; margin:0; flex: 1;" onclick="fecharScanner()">Sair</button>
+        <button class="btn-primary" style="background:var(--aliva-escuro); margin:0; flex: 1;" onclick="rodarImagem90()">🔄 Rodar 90°</button>
+        <button class="btn-primary" style="margin:0; flex: 1.5;" onclick="processarScan()">Realçar Documento</button>
     </div>
 </div>
 
@@ -155,7 +156,7 @@
         if(id === 'aba-arquivo') carregarOnline();
     }
 
-    // --- LOGICA DE ANEXOS ---
+    // --- LÓGICA DE ANEXOS ---
     document.getElementById('camInputScan').addEventListener('change', function(e) {
         if(!e.target.files[0]) return;
         const r = new FileReader();
@@ -203,6 +204,47 @@
         ctx.fillStyle = "#3dbcba"; pontos.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, Math.PI*2); ctx.fill(); });
     }
 
+    function rodarImagem90() {
+        if (!imgTemp) return;
+
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        tempCanvas.width = imgTemp.height;
+        tempCanvas.height = imgTemp.width;
+        
+        tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+        tempCtx.rotate(90 * Math.PI / 180);
+        tempCtx.drawImage(imgTemp, -imgTemp.width / 2, -imgTemp.height / 2);
+        
+        const canvasUI = document.getElementById('canvas-ui');
+        const velhoW = canvasUI.width;
+        const velhoH = canvasUI.height;
+
+        const novaImg = new Image();
+        novaImg.onload = function() {
+            imgTemp = novaImg;
+            
+            const maxW = window.innerWidth * 0.95, maxH = window.innerHeight * 0.75;
+            escalaVisual = Math.min(maxW / imgTemp.width, maxH / imgTemp.height);
+            
+            canvasUI.width = imgTemp.width * escalaVisual;
+            canvasUI.height = imgTemp.height * escalaVisual;
+            
+            pontos = pontos.map(p => {
+                const percX = p.x / velhoW;
+                const percY = p.y / velhoH;
+                return {
+                    x: (1 - percY) * canvasUI.width,
+                    y: percX * canvasUI.height
+                };
+            });
+            
+            desenharUI();
+        };
+        novaImg.src = tempCanvas.toDataURL('image/jpeg');
+    }
+
     function processarScan() {
         const src = cv.imread(imgTemp);
         let ptsR = []; pontos.forEach(p => { ptsR.push(p.x/escalaVisual); ptsR.push(p.y/escalaVisual); });
@@ -222,7 +264,7 @@
     }
     function fecharScanner() { document.getElementById('scanner-overlay').style.display='none'; }
 
-    // --- LOGICA GERAL ---
+    // --- LÓGICA GERAL ---
     function finalizarRegisto() {
         const nome = document.getElementById('nome').value;
         if(!nome) return alert("O Nome é obrigatório.");
@@ -248,12 +290,13 @@
             anexos: anexos
         };
         
+        const chaveCache = reg.driveFileID || reg.idLocal;
         let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
-        cache[driveFileID || reg.idLocal] = reg;
+        cache[chaveCache] = reg;
         localStorage.setItem('aliva_cache', JSON.stringify(cache));
 
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
-        if(editandoID) fila = fila.filter(x => x.idLocal !== editandoID);
+        fila = fila.filter(x => x.idLocal !== reg.idLocal);
         fila.push(reg);
         localStorage.setItem('aliva_fila', JSON.stringify(fila));
         
@@ -302,7 +345,7 @@
         if(isPendente) {
             const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
             f = fila.find(x => x.idLocal == id);
-            driveFileID = f.driveFileID || null; 
+            driveFileID = f ? (f.driveFileID || null) : null; 
         } else {
             isOnlineEdit = true;
             const onlineDoc = dbOnline.find(x => x.id === id);
@@ -316,11 +359,14 @@
             if(!f) f = { nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').split('_')[0].replace(/-/g,' ') : "", idLocal: Date.now(), anexos: [] };
             
             alert("🔒 PROTEÇÃO DE DADOS:\nComo esta ficha já foi arquivada, as fotos originais estão seladas no PDF.\n\nPara não as perder, será criada uma Adenda. O PDF antigo será mantido intacto.");
+            
+            f.idLocal = Date.now();
             driveFileID = null; 
         }
         
         if(!f) return;
-        editandoID = isOnlineEdit ? Date.now() : (f.idLocal || Date.now());
+        editandoID = f.idLocal;
+        
         const ind = document.getElementById('edit-indicator');
         ind.classList.remove('hidden');
         if(isOnlineEdit) {
@@ -383,7 +429,7 @@
                 ['Paciente', item.nome], 
                 ['ID Proc.', item.idPaciente], 
                 ['Exame', item.exame],
-                ['Hipótese Diag.', item.hipotese || ""], // <- Campo adicionado aqui
+                ['Hipótese Diag.', item.hipotese || ""], 
                 ['Cirurgia', item.cir_det || item.cirurgia], 
                 ['Quimio/Radio', item.q_det || item.quimio],
                 ['Trauma', item.t_det || item.trauma], 
@@ -392,8 +438,8 @@
             ],
             theme: 'striped', 
             headStyles: { fillColor: [42, 122, 155] },
-            styles: { overflow: 'linebreak' }, // Evita que textos longos (como a hipótese) cortem no PDF
-            columnStyles: { 1: { cellWidth: 130 } } // Dá mais espaço horizontal para a coluna das descrições
+            styles: { overflow: 'linebreak' },
+            columnStyles: { 1: { cellWidth: 130 } }
         });
         
         item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
@@ -401,8 +447,6 @@
         
         try {
             const base64 = doc.output('datauristring').split(',')[1];
-            
-            // Remove acentos e caracteres especiais do nome para não falhar no Google Drive
             const nomeLimpo = item.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9-_]/g, "-");
             const nomeFicheiro = `Ficha_${nomeLimpo}`;
             
