@@ -331,6 +331,27 @@
         return 'JPEG';
     }
 
+    function addImageFitPage(doc, imgData, margin = 5) {
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+
+        const maxW = pageW - (margin * 2);
+        const maxH = pageH - (margin * 2);
+
+        const imgProps = doc.getImageProperties(imgData);
+        const imgW = imgProps.width;
+        const imgH = imgProps.height;
+
+        const ratio = Math.min(maxW / imgW, maxH / imgH);
+        const renderW = imgW * ratio;
+        const renderH = imgH * ratio;
+
+        const x = (pageW - renderW) / 2;
+        const y = (pageH - renderH) / 2;
+
+        doc.addImage(imgData, getImageFormat(imgData), x, y, renderW, renderH);
+    }
+
     function finalizarRegisto() {
         const nome = document.getElementById('nome').value.trim();
         if(!nome) return alert("O Nome é obrigatório.");
@@ -578,7 +599,7 @@
         isSyncing = true;
         const item = fila[0];
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
         try {
             try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e) {}
@@ -609,7 +630,7 @@
 
             item.anexos.forEach(img => {
                 doc.addPage();
-                doc.addImage(img, getImageFormat(img), 5, 5, 200, 287);
+                addImageFitPage(doc, img, 5);
             });
 
             const metaObj = { ...item };
@@ -618,7 +639,7 @@
             const base64 = doc.output('datauristring').split(',')[1];
             const nomeLimpo = item.nome
                 .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[\\u0300-\\u036f]/g, "")
                 .replace(/[^a-zA-Z0-9-_]/g, "-");
 
             const nomeFicheiro = `Ficha_${nomeLimpo}`;
