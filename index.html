@@ -148,9 +148,14 @@
     let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
     let isSyncing = false;
 
-    window.onload = () => { atualizarFilaUI(); setInterval(syncProcess, 5000); };
+    window.onload = () => {
+        atualizarFilaUI();
+        carregarOnline();
+        setInterval(syncProcess, 5000);
+    };
 
     function toggleC(id, s) { document.getElementById(id).style.display = s ? 'block' : 'none'; }
+
     function switchTab(id) {
         document.querySelectorAll('.aba-conteudo, .tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -158,52 +163,83 @@
         if(id === 'aba-arquivo') carregarOnline();
     }
 
-    // --- LÓGICA DE ANEXOS ---
     document.getElementById('camInputScan').addEventListener('change', function(e) {
         if(!e.target.files[0]) return;
         const r = new FileReader();
-        r.onload = ev => { const i = new Image(); i.onload = () => abrirScanner(i); i.src = ev.target.result; };
+        r.onload = ev => {
+            const i = new Image();
+            i.onload = () => abrirScanner(i);
+            i.src = ev.target.result;
+        };
         r.readAsDataURL(e.target.files[0]);
+        e.target.value = "";
     });
 
     document.getElementById('camInputDirect').addEventListener('change', function(e) {
         if(!e.target.files[0]) return;
         const r = new FileReader();
-        r.onload = ev => { anexos.push(ev.target.result); renderAnexos(); };
+        r.onload = ev => {
+            anexos.push(ev.target.result);
+            renderAnexos();
+        };
         r.readAsDataURL(e.target.files[0]);
+        e.target.value = "";
     });
 
     function abrirScanner(img) {
-        imgTemp = img; document.getElementById('scanner-overlay').style.display = 'flex';
+        imgTemp = img;
+        document.getElementById('scanner-overlay').style.display = 'flex';
         const canvas = document.getElementById('canvas-ui');
         const maxW = window.innerWidth * 0.95, maxH = window.innerHeight * 0.75;
         escalaVisual = Math.min(maxW / img.width, maxH / img.height);
-        canvas.width = img.width * escalaVisual; canvas.height = img.height * escalaVisual;
+        canvas.width = img.width * escalaVisual;
+        canvas.height = img.height * escalaVisual;
         const w = canvas.width, h = canvas.height;
         pontos = [{x:w*0.1,y:h*0.1},{x:w*0.9,y:h*0.1},{x:w*0.9,y:h*0.9},{x:w*0.1,y:h*0.9}];
-        desenharUI(); 
-        const rect = canvas.getBoundingClientRect();
+        desenharUI();
+
         canvas.ontouchstart = canvas.onmousedown = e => {
+            const rect = canvas.getBoundingClientRect();
             const t = e.touches ? e.touches[0] : e;
             const px = t.clientX - rect.left, py = t.clientY - rect.top;
-            let pi = null; pontos.forEach((pt, i) => { if(Math.hypot(pt.x-px, pt.y-py) < 35) pi = i; });
+            let pi = null;
+
+            pontos.forEach((pt, i) => {
+                if(Math.hypot(pt.x-px, pt.y-py) < 35) pi = i;
+            });
+
             if(pi !== null) {
                 window.ontouchmove = window.onmousemove = ev => {
+                    const r = canvas.getBoundingClientRect();
                     const tt = ev.touches ? ev.touches[0] : ev;
-                    pontos[pi] = {x: tt.clientX - rect.left, y: tt.clientY - rect.top};
+                    pontos[pi] = {x: tt.clientX - r.left, y: tt.clientY - r.top};
                     desenharUI();
                 };
-                window.ontouchend = window.onmouseup = () => window.ontouchmove = window.onmousemove = null;
+                window.ontouchend = window.onmouseup = () => {
+                    window.ontouchmove = null;
+                    window.onmousemove = null;
+                };
             }
         };
     }
 
     function desenharUI() {
         const ctx = document.getElementById('canvas-ui').getContext('2d');
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.drawImage(imgTemp, 0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.strokeStyle = "#3dbcba"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(pontos[0].x, pontos[0].y);
-        pontos.forEach(p => ctx.lineTo(p.x, p.y)); ctx.closePath(); ctx.stroke();
-        ctx.fillStyle = "#3dbcba"; pontos.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, Math.PI*2); ctx.fill(); });
+        ctx.strokeStyle = "#3dbcba";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(pontos[0].x, pontos[0].y);
+        pontos.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = "#3dbcba";
+        pontos.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 15, 0, Math.PI*2);
+            ctx.fill();
+        });
     }
 
     function rodarImagem90() {
@@ -211,14 +247,12 @@
 
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
-        
         tempCanvas.width = imgTemp.height;
         tempCanvas.height = imgTemp.width;
-        
         tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
         tempCtx.rotate(90 * Math.PI / 180);
         tempCtx.drawImage(imgTemp, -imgTemp.width / 2, -imgTemp.height / 2);
-        
+
         const canvasUI = document.getElementById('canvas-ui');
         const velhoW = canvasUI.width;
         const velhoH = canvasUI.height;
@@ -226,13 +260,11 @@
         const novaImg = new Image();
         novaImg.onload = function() {
             imgTemp = novaImg;
-            
             const maxW = window.innerWidth * 0.95, maxH = window.innerHeight * 0.75;
             escalaVisual = Math.min(maxW / imgTemp.width, maxH / imgTemp.height);
-            
             canvasUI.width = imgTemp.width * escalaVisual;
             canvasUI.height = imgTemp.height * escalaVisual;
-            
+
             pontos = pontos.map(p => {
                 const percX = p.x / velhoW;
                 const percY = p.y / velhoH;
@@ -241,41 +273,74 @@
                     y: percX * canvasUI.height
                 };
             });
-            
+
             desenharUI();
         };
         novaImg.src = tempCanvas.toDataURL('image/jpeg');
     }
 
     function processarScan() {
+        if (typeof cv === 'undefined') {
+            alert("OpenCV ainda está a carregar.");
+            return;
+        }
+
         const src = cv.imread(imgTemp);
-        let ptsR = []; pontos.forEach(p => { ptsR.push(p.x/escalaVisual); ptsR.push(p.y/escalaVisual); });
+        let ptsR = [];
+        pontos.forEach(p => {
+            ptsR.push(p.x / escalaVisual);
+            ptsR.push(p.y / escalaVisual);
+        });
+
         let srcT = cv.matFromArray(4, 1, cv.CV_32FC2, ptsR);
         const oW = 1000, oH = 1400;
         let dstT = cv.matFromArray(4, 1, cv.CV_32FC2, [0,0, oW,0, oW,oH, 0,oH]);
-        let M = cv.getPerspectiveTransform(srcT, dstT), dst = new cv.Mat();
+        let M = cv.getPerspectiveTransform(srcT, dstT);
+        let dst = new cv.Mat();
+
         cv.warpPerspective(src, dst, M, new cv.Size(oW, oH));
-        dst.convertTo(dst, -1, 1.4, 10); 
-        const cOut = document.createElement('canvas'); cv.imshow(cOut, dst);
+        dst.convertTo(dst, -1, 1.4, 10);
+
+        const cOut = document.createElement('canvas');
+        cv.imshow(cOut, dst);
         anexos.push(cOut.toDataURL('image/jpeg', 0.8));
-        renderAnexos(); fecharScanner(); src.delete(); dst.delete(); M.delete();
+        renderAnexos();
+        fecharScanner();
+
+        src.delete();
+        dst.delete();
+        M.delete();
+        srcT.delete();
+        dstT.delete();
     }
 
     function renderAnexos() {
-        document.getElementById('preview-container').innerHTML = anexos.map((img, i) => `<img src="${img}" class="thumb" onclick="if(confirm('Apagar imagem?')){anexos.splice(${i},1);renderAnexos();}">`).join('');
+        document.getElementById('preview-container').innerHTML = anexos.map((img, i) =>
+            `<img src="${img}" class="thumb" onclick="if(confirm('Apagar imagem?')){anexos.splice(${i},1);renderAnexos();}">`
+        ).join('');
     }
-    function fecharScanner() { document.getElementById('scanner-overlay').style.display='none'; }
 
-    // --- LÓGICA GERAL ---
+    function fecharScanner() {
+        document.getElementById('scanner-overlay').style.display='none';
+    }
+
+    function getImageFormat(dataUrl) {
+        if (!dataUrl || typeof dataUrl !== 'string') return 'JPEG';
+        if (dataUrl.startsWith('data:image/png')) return 'PNG';
+        if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
+        return 'JPEG';
+    }
+
     function finalizarRegisto() {
-        const nome = document.getElementById('nome').value;
+        const nome = document.getElementById('nome').value.trim();
         if(!nome) return alert("O Nome é obrigatório.");
+
         document.getElementById('btnFinalizar').disabled = true;
-        
+
         const getV = id => document.getElementById(id).value;
         const reg = {
             idLocal: editandoID || Date.now(),
-            driveFileID: driveFileID, 
+            driveFileID: driveFileID,
             nome: nome,
             dataNasc: getV('dataNasc'),
             idPaciente: getV('idPaciente'),
@@ -291,7 +356,7 @@
             inicio: getV('inicio'),
             anexos: anexos
         };
-        
+
         const chaveCache = reg.driveFileID || reg.idLocal;
         let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
         cache[chaveCache] = reg;
@@ -301,8 +366,10 @@
         fila = fila.filter(x => x.idLocal !== reg.idLocal);
         fila.push(reg);
         localStorage.setItem('aliva_fila', JSON.stringify(fila));
-        
-        resetForm(); atualizarFilaUI(); alert("Registo colocado na fila de envio.");
+
+        resetForm();
+        atualizarFilaUI();
+        alert("Registo colocado na fila de envio.");
         document.getElementById('btnFinalizar').disabled = false;
     }
 
@@ -310,7 +377,12 @@
         const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
         const cont = document.getElementById('container-pendentes');
         const lista = document.getElementById('lista-pendentes');
-        if(fila.length === 0) { cont.classList.add('hidden'); return; }
+
+        if(fila.length === 0) {
+            cont.classList.add('hidden');
+            return;
+        }
+
         cont.classList.remove('hidden');
         lista.innerHTML = fila.map(f => `
             <div class="item-registo" style="background:var(--pendente)">
@@ -323,160 +395,303 @@
     async function carregarOnline() {
         const lista = document.getElementById('lista-online');
         lista.innerHTML = "A carregar do Drive...";
+
         try {
-            const res = await fetch(SCRIPT_URL);
-            dbOnline = await res.json();
+            const res = await fetch(SCRIPT_URL, {
+                method: 'GET',
+                redirect: 'follow'
+            });
+
+            const data = await res.json();
+
+            if (!data.ok) {
+                lista.innerHTML = "Erro: " + (data.error || "Falha ao listar ficheiros.");
+                return;
+            }
+
+            dbOnline = data.files || [];
+
             const apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
             const filtrados = dbOnline.filter(f => !apagados.includes(f.id));
+
+            if (filtrados.length === 0) {
+                lista.innerHTML = "Sem ficheiros no arquivo.";
+                return;
+            }
+
             lista.innerHTML = filtrados.map(f => `
                 <div class="item-registo" id="row-${f.id}">
-                    <div><b>${f.name}</b><br><small>${new Date(f.date).toLocaleDateString()}</small></div>
+                    <div><b>${f.name}</b><br><small>${new Date(f.dateCreated).toLocaleDateString()}</small></div>
                     <div style="display:flex; gap:10px;">
                         <button class="action-btn" onclick="editarReg('${f.id}', false)">✏️</button>
                         <button class="action-btn" onclick="apagarOnline('${f.id}')">🗑️</button>
-                        <a href="${f.url}" target="_blank" class="action-btn" style="text-decoration:none;">👁️</a>
+                        <a href="${f.webViewLink}" target="_blank" class="action-btn" style="text-decoration:none;">👁️</a>
                     </div>
                 </div>
             `).join('');
-        } catch(e) { lista.innerHTML = "Erro de ligação."; }
+        } catch(e) {
+            console.error(e);
+            lista.innerHTML = "Erro de ligação.";
+        }
     }
 
     function editarReg(id, isPendente) {
         let f = null;
         let isOnlineEdit = false;
+
         if(isPendente) {
             const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
             f = fila.find(x => x.idLocal == id);
-            driveFileID = f ? (f.driveFileID || null) : null; 
+            driveFileID = f ? (f.driveFileID || null) : null;
         } else {
             isOnlineEdit = true;
             const onlineDoc = dbOnline.find(x => x.id === id);
+
             if(onlineDoc && onlineDoc.meta) {
                 try { f = JSON.parse(onlineDoc.meta); } catch(e) {}
             }
+
             if(!f) {
                 const cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
                 f = cache[id];
             }
-            if(!f) f = { nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').split('_')[0].replace(/-/g,' ') : "", idLocal: Date.now(), anexos: [] };
-            
+
+            if(!f) {
+                f = {
+                    nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').replace('.pdf', '').replace(/-/g,' ') : "",
+                    idLocal: Date.now(),
+                    anexos: []
+                };
+            }
+
             alert("🔒 PROTEÇÃO DE DADOS:\nComo esta ficha já foi arquivada, as fotos originais estão seladas no PDF.\n\nPara não as perder, será criada uma Adenda. O PDF antigo será mantido intacto.");
-            
+
             f.idLocal = Date.now();
-            driveFileID = null; 
+            driveFileID = null;
         }
-        
+
         if(!f) return;
         editandoID = f.idLocal;
-        
+
         const ind = document.getElementById('edit-indicator');
         ind.classList.remove('hidden');
+
         if(isOnlineEdit) {
             ind.innerHTML = "📝 MODO DE ADENDA (O PDF original não será apagado)";
-            ind.style.background = "#fff3cd"; ind.style.color = "#856404"; ind.style.borderColor = "#ffeeba";
+            ind.style.background = "#fff3cd";
+            ind.style.color = "#856404";
+            ind.style.borderColor = "#ffeeba";
         } else {
             ind.innerHTML = "✏️ MODO DE EDIÇÃO ATIVO";
-            ind.style.background = "#e3f2fd"; ind.style.color = "#0d47a1"; ind.style.borderColor = "#bbdefb";
+            ind.style.background = "#e3f2fd";
+            ind.style.color = "#0d47a1";
+            ind.style.borderColor = "#bbdefb";
         }
+
         document.getElementById('btnCancelar').classList.remove('hidden');
-        
+
         let nomeFinal = f.nome || "";
         if (isOnlineEdit && !nomeFinal.includes("(Adenda)")) nomeFinal += " (Adenda)";
+
         document.getElementById('nome').value = nomeFinal;
         document.getElementById('dataNasc').value = f.dataNasc || "";
         document.getElementById('idPaciente').value = f.idPaciente || "";
         document.getElementById('exame').value = f.exame || "";
         document.getElementById('hipotese').value = f.hipotese || "";
-        
-        if(f.cirurgia === "Sim") { document.getElementById('cs').checked = true; toggleC('gc', true); document.getElementById('cir_det').value = f.cir_det || ""; }
-        else { document.getElementById('cn').checked = true; toggleC('gc', false); }
-        if(f.quimio === "Sim") { document.getElementById('qs').checked = true; toggleC('gq', true); document.getElementById('q_det').value = f.q_det || ""; }
-        else { document.getElementById('qn').checked = true; toggleC('gq', false); }
-        if(f.trauma === "Sim") { document.getElementById('ts').checked = true; toggleC('gt', true); document.getElementById('t_det').value = f.t_det || ""; }
-        else { document.getElementById('tn').checked = true; toggleC('gt', false); }
-        
+
+        if(f.cirurgia === "Sim") {
+            document.getElementById('cs').checked = true;
+            toggleC('gc', true);
+            document.getElementById('cir_det').value = f.cir_det || "";
+        } else {
+            document.getElementById('cn').checked = true;
+            toggleC('gc', false);
+            document.getElementById('cir_det').value = "";
+        }
+
+        if(f.quimio === "Sim") {
+            document.getElementById('qs').checked = true;
+            toggleC('gq', true);
+            document.getElementById('q_det').value = f.q_det || "";
+        } else {
+            document.getElementById('qn').checked = true;
+            toggleC('gq', false);
+            document.getElementById('q_det').value = "";
+        }
+
+        if(f.trauma === "Sim") {
+            document.getElementById('ts').checked = true;
+            toggleC('gt', true);
+            document.getElementById('t_det').value = f.t_det || "";
+        } else {
+            document.getElementById('tn').checked = true;
+            toggleC('gt', false);
+            document.getElementById('t_det').value = "";
+        }
+
         document.getElementById('sintomas').value = f.sintomas || "";
         document.getElementById('inicio').value = f.inicio || "";
-        anexos = f.anexos || []; renderAnexos();
-        switchTab('aba-novo'); window.scrollTo(0,0);
+        anexos = f.anexos || [];
+        renderAnexos();
+        switchTab('aba-novo');
+        window.scrollTo(0,0);
     }
 
     async function apagarOnline(id) {
         if(!confirm("Eliminar permanentemente?")) return;
+
         const row = document.getElementById('row-' + id);
         if(row) row.style.display = 'none';
+
         try {
-            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) });
+            const res = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify({ action: 'delete', id: id })
+            });
+
+            const data = await res.json();
+
+            if (!data.ok) {
+                throw new Error(data.error || "Falha ao apagar.");
+            }
+
             let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
-            apagados.push(id); localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
-        } catch(e) { if(row) row.style.display = 'flex'; }
+            if (!apagados.includes(id)) apagados.push(id);
+            localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
+        } catch(e) {
+            console.error(e);
+            if(row) row.style.display = 'flex';
+            alert("Erro ao apagar: " + e.message);
+        }
     }
 
     async function syncProcess() {
         if (isSyncing) return;
+
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
         if(fila.length === 0) return;
+
         isSyncing = true;
         const item = fila[0];
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        
-        try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e){}
-        doc.setFontSize(14); doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
-        
-        doc.autoTable({
-            startY: 45, 
-            head: [['Campo', 'Informação']],
-            body: [
-                ['Paciente', item.nome], 
-                ['ID Proc.', item.idPaciente], 
-                ['Exame', item.exame],
-                ['Hipótese Diag.', item.hipotese || ""], 
-                ['Cirurgia', item.cir_det || item.cirurgia], 
-                ['Quimio/Radio', item.q_det || item.quimio],
-                ['Trauma', item.t_det || item.trauma], 
-                ['Sintomas', item.sintomas], 
-                ['Início', item.inicio]
-            ],
-            theme: 'striped', 
-            headStyles: { fillColor: [42, 122, 155] },
-            styles: { overflow: 'linebreak' },
-            columnStyles: { 1: { cellWidth: 130 } }
-        });
-        
-        item.anexos.forEach(img => { doc.addPage(); doc.addImage(img, 'JPEG', 5, 5, 200, 287); });
-        const metaObj = { ...item }; delete metaObj.anexos;
-        
+
         try {
+            try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e) {}
+
+            doc.setFontSize(14);
+            doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
+
+            doc.autoTable({
+                startY: 45,
+                head: [['Campo', 'Informação']],
+                body: [
+                    ['Paciente', item.nome],
+                    ['Nascimento', item.dataNasc || ""],
+                    ['ID Proc.', item.idPaciente || ""],
+                    ['Exame', item.exame || ""],
+                    ['Hipótese Diag.', item.hipotese || ""],
+                    ['Cirurgia', item.cir_det || item.cirurgia || ""],
+                    ['Quimio/Radio', item.q_det || item.quimio || ""],
+                    ['Trauma', item.t_det || item.trauma || ""],
+                    ['Sintomas', item.sintomas || ""],
+                    ['Início', item.inicio || ""]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [42, 122, 155] },
+                styles: { overflow: 'linebreak' },
+                columnStyles: { 1: { cellWidth: 130 } }
+            });
+
+            item.anexos.forEach(img => {
+                doc.addPage();
+                doc.addImage(img, getImageFormat(img), 5, 5, 200, 287);
+            });
+
+            const metaObj = { ...item };
+            delete metaObj.anexos;
+
             const base64 = doc.output('datauristring').split(',')[1];
-            const nomeLimpo = item.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9-_]/g, "-");
+            const nomeLimpo = item.nome
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-zA-Z0-9-_]/g, "-");
+
             const nomeFicheiro = `Ficha_${nomeLimpo}`;
-            
-            const payload = { nome: nomeFicheiro, pdf: base64, oldID: item.driveFileID, meta: JSON.stringify(metaObj) };
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-            if(res.ok) { 
-                fila.shift(); localStorage.setItem('aliva_fila', JSON.stringify(fila)); 
-                atualizarFilaUI(); 
-                let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
-                delete cache[item.driveFileID || item.idLocal];
-                localStorage.setItem('aliva_cache', JSON.stringify(cache));
+            const payload = {
+                nome: nomeFicheiro,
+                pdf: base64,
+                oldID: item.driveFileID || null,
+                meta: JSON.stringify(metaObj)
+            };
+
+            const res = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (!data.ok) {
+                throw new Error(data.error || "Falha na sincronização.");
             }
+
+            fila.shift();
+            localStorage.setItem('aliva_fila', JSON.stringify(fila));
+
+            let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+            delete cache[item.driveFileID || item.idLocal];
+
+            if (data.file && data.file.id) {
+                cache[data.file.id] = { ...item, driveFileID: data.file.id };
+            }
+
+            localStorage.setItem('aliva_cache', JSON.stringify(cache));
+
+            if (data.oldDelete && data.oldDelete.attempted && !data.oldDelete.success) {
+                console.warn("Falha ao apagar ficheiro antigo:", data.oldDelete.message);
+            }
+
+            atualizarFilaUI();
         } catch(e) {
             console.error("Erro na sincronização:", e);
-        } finally { 
-            isSyncing = false; 
+        } finally {
+            isSyncing = false;
         }
     }
 
     function resetForm() {
-        editandoID = null; driveFileID = null;
+        editandoID = null;
+        driveFileID = null;
+
         document.getElementById('edit-indicator').classList.add('hidden');
         document.getElementById('btnCancelar').classList.add('hidden');
+
         document.querySelectorAll('input[type="text"], input[type="date"], textarea').forEach(i => i.value = "");
-        document.getElementById('cn').checked = true; toggleC('gc', false);
-        document.getElementById('qn').checked = true; toggleC('gq', false);
-        document.getElementById('tn').checked = true; toggleC('gt', false);
-        anexos = []; renderAnexos(); window.scrollTo(0,0);
+
+        document.getElementById('cn').checked = true;
+        toggleC('gc', false);
+        document.getElementById('cir_det').value = "";
+
+        document.getElementById('qn').checked = true;
+        toggleC('gq', false);
+        document.getElementById('q_det').value = "";
+
+        document.getElementById('tn').checked = true;
+        toggleC('gt', false);
+        document.getElementById('t_det').value = "";
+
+        anexos = [];
+        renderAnexos();
+        window.scrollTo(0,0);
     }
 </script>
 </body>
