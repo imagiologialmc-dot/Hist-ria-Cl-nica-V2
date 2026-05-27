@@ -39,6 +39,7 @@
     .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
     .btn-secondary { width: 100%; padding: 12px; border: 2px solid #ccc; border-radius: 12px; font-weight: bold; cursor: pointer; background: white; color: #666; margin-top: 10px; }
     .action-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 5px; }
+    .action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
     #scanner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; flex-direction: column; z-index: 10000; }
     #preview-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .thumb { width: 65px; height: 85px; object-fit: cover; border-radius: 6px; border: 2px solid var(--aliva-claro); cursor: pointer; }
@@ -147,6 +148,7 @@
     
     let anexos = [], pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
     let isSyncing = false;
+    const SYNC_STALE_MS = 2 * 60 * 1000;
 
     window.onload = () => {
         atualizarFilaUI();
@@ -160,11 +162,11 @@
         document.querySelectorAll('.aba-conteudo, .tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.getElementById('tab-' + id.split('-')[1]).classList.add('active');
-        if(id === 'aba-arquivo') carregarOnline();
+        if (id === 'aba-arquivo') carregarOnline();
     }
 
     document.getElementById('camInputScan').addEventListener('change', function(e) {
-        if(!e.target.files[0]) return;
+        if (!e.target.files[0]) return;
         const r = new FileReader();
         r.onload = ev => {
             const i = new Image();
@@ -176,7 +178,7 @@
     });
 
     document.getElementById('camInputDirect').addEventListener('change', function(e) {
-        if(!e.target.files[0]) return;
+        if (!e.target.files[0]) return;
         const r = new FileReader();
         r.onload = ev => {
             anexos.push(ev.target.result);
@@ -205,10 +207,10 @@
             let pi = null;
 
             pontos.forEach((pt, i) => {
-                if(Math.hypot(pt.x-px, pt.y-py) < 35) pi = i;
+                if (Math.hypot(pt.x-px, pt.y-py) < 35) pi = i;
             });
 
-            if(pi !== null) {
+            if (pi !== null) {
                 window.ontouchmove = window.onmousemove = ev => {
                     const r = canvas.getBoundingClientRect();
                     const tt = ev.touches ? ev.touches[0] : ev;
@@ -321,7 +323,7 @@
     }
 
     function fecharScanner() {
-        document.getElementById('scanner-overlay').style.display='none';
+        document.getElementById('scanner-overlay').style.display = 'none';
     }
 
     function getImageFormat(dataUrl) {
@@ -334,34 +336,29 @@
     function addImageFitPage(doc, imgData, margin = 5) {
         const pageW = doc.internal.pageSize.getWidth();
         const pageH = doc.internal.pageSize.getHeight();
-
         const maxW = pageW - (margin * 2);
         const maxH = pageH - (margin * 2);
-
         const imgProps = doc.getImageProperties(imgData);
         const imgW = imgProps.width;
         const imgH = imgProps.height;
-
         const ratio = Math.min(maxW / imgW, maxH / imgH);
         const renderW = imgW * ratio;
         const renderH = imgH * ratio;
-
         const x = (pageW - renderW) / 2;
         const y = (pageH - renderH) / 2;
-
         doc.addImage(imgData, getImageFormat(imgData), x, y, renderW, renderH);
     }
 
     function finalizarRegisto() {
         const nome = document.getElementById('nome').value.trim();
-        if(!nome) return alert("O Nome é obrigatório.");
+        if (!nome) return alert("O Nome é obrigatório.");
 
         document.getElementById('btnFinalizar').disabled = true;
 
         const getV = id => document.getElementById(id).value;
         const reg = {
             idLocal: editandoID || Date.now(),
-            driveFileID: driveFileID,
+            driveFileID: driveFileID || null,
             nome: nome,
             dataNasc: getV('dataNasc'),
             idPaciente: getV('idPaciente'),
@@ -375,7 +372,10 @@
             t_det: getV('t_det'),
             sintomas: getV('sintomas'),
             inicio: getV('inicio'),
-            anexos: anexos
+            anexos: anexos,
+            syncing: false,
+            syncingAt: null,
+            lastError: null
         };
 
         const chaveCache = reg.driveFileID || reg.idLocal;
@@ -399,18 +399,27 @@
         const cont = document.getElementById('container-pendentes');
         const lista = document.getElementById('lista-pendentes');
 
-        if(fila.length === 0) {
+        if (fila.length === 0) {
             cont.classList.add('hidden');
+            lista.innerHTML = "";
             return;
         }
 
         cont.classList.remove('hidden');
-        lista.innerHTML = fila.map(f => `
-            <div class="item-registo" style="background:var(--pendente)">
-                <div><b>${f.nome}</b><br><small>A sincronizar...</small></div>
-                <button class="action-btn" onclick="editarReg('${f.idLocal}', true)">✏️</button>
-            </div>
-        `).join('');
+        lista.innerHTML = fila.map(f => {
+            const stale = f.syncing && f.syncingAt && (Date.now() - f.syncingAt > SYNC_STALE_MS);
+            const emSync = f.syncing && !stale;
+            const estado = emSync
+                ? "A sincronizar..."
+                : (f.lastError ? `Pendente • erro: ${f.lastError}` : "Pendente de envio");
+
+            return `
+                <div class="item-registo" style="background:var(--pendente)">
+                    <div><b>${f.nome}</b><br><small>${estado}</small></div>
+                    <button class="action-btn" ${emSync ? 'disabled title="Em sincronização"' : ''} onclick="editarReg('${f.idLocal}', true)">✏️</button>
+                </div>
+            `;
+        }).join('');
     }
 
     async function carregarOnline() {
@@ -450,7 +459,7 @@
                     </div>
                 </div>
             `).join('');
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             lista.innerHTML = "Erro de ligação.";
         }
@@ -460,24 +469,33 @@
         let f = null;
         let isOnlineEdit = false;
 
-        if(isPendente) {
+        if (isPendente) {
             const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
             f = fila.find(x => x.idLocal == id);
-            driveFileID = f ? (f.driveFileID || null) : null;
+
+            if (!f) return;
+
+            const stale = f.syncing && f.syncingAt && (Date.now() - f.syncingAt > SYNC_STALE_MS);
+            if (f.syncing && !stale) {
+                alert("Este registo está neste momento em sincronização. Aguarda alguns segundos.");
+                return;
+            }
+
+            driveFileID = f.driveFileID || null;
         } else {
             isOnlineEdit = true;
             const onlineDoc = dbOnline.find(x => x.id === id);
 
-            if(onlineDoc && onlineDoc.meta) {
-                try { f = JSON.parse(onlineDoc.meta); } catch(e) {}
+            if (onlineDoc && onlineDoc.meta) {
+                try { f = JSON.parse(onlineDoc.meta); } catch (e) {}
             }
 
-            if(!f) {
+            if (!f) {
                 const cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
                 f = cache[id];
             }
 
-            if(!f) {
+            if (!f) {
                 f = {
                     nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').replace('.pdf', '').replace(/-/g,' ') : "",
                     idLocal: Date.now(),
@@ -485,19 +503,19 @@
                 };
             }
 
-            alert("🔒 PROTEÇÃO DE DADOS:\\nComo esta ficha já foi arquivada, as fotos originais estão seladas no PDF.\\n\\nPara não as perder, será criada uma Adenda. O PDF antigo será mantido intacto.");
+            alert("🔒 PROTEÇÃO DE DADOS:\nComo esta ficha já foi arquivada, as fotos originais estão seladas no PDF.\n\nPara não as perder, será criada uma Adenda. O PDF antigo será mantido intacto.");
 
             f.idLocal = Date.now();
             driveFileID = null;
         }
 
-        if(!f) return;
+        if (!f) return;
         editandoID = f.idLocal;
 
         const ind = document.getElementById('edit-indicator');
         ind.classList.remove('hidden');
 
-        if(isOnlineEdit) {
+        if (isOnlineEdit) {
             ind.innerHTML = "📝 MODO DE ADENDA (O PDF original não será apagado)";
             ind.style.background = "#fff3cd";
             ind.style.color = "#856404";
@@ -520,7 +538,7 @@
         document.getElementById('exame').value = f.exame || "";
         document.getElementById('hipotese').value = f.hipotese || "";
 
-        if(f.cirurgia === "Sim") {
+        if (f.cirurgia === "Sim") {
             document.getElementById('cs').checked = true;
             toggleC('gc', true);
             document.getElementById('cir_det').value = f.cir_det || "";
@@ -530,7 +548,7 @@
             document.getElementById('cir_det').value = "";
         }
 
-        if(f.quimio === "Sim") {
+        if (f.quimio === "Sim") {
             document.getElementById('qs').checked = true;
             toggleC('gq', true);
             document.getElementById('q_det').value = f.q_det || "";
@@ -540,7 +558,7 @@
             document.getElementById('q_det').value = "";
         }
 
-        if(f.trauma === "Sim") {
+        if (f.trauma === "Sim") {
             document.getElementById('ts').checked = true;
             toggleC('gt', true);
             document.getElementById('t_det').value = f.t_det || "";
@@ -559,10 +577,10 @@
     }
 
     async function apagarOnline(id) {
-        if(!confirm("Eliminar permanentemente?")) return;
+        if (!confirm("Eliminar permanentemente?")) return;
 
         const row = document.getElementById('row-' + id);
-        if(row) row.style.display = 'none';
+        if (row) row.style.display = 'none';
 
         try {
             const res = await fetch(SCRIPT_URL, {
@@ -583,9 +601,9 @@
             let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
             if (!apagados.includes(id)) apagados.push(id);
             localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
-        } catch(e) {
+        } catch (e) {
             console.error(e);
-            if(row) row.style.display = 'flex';
+            if (row) row.style.display = 'flex';
             alert("Erro ao apagar: " + e.message);
         }
     }
@@ -594,7 +612,30 @@
         if (isSyncing) return;
 
         let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
-        if(fila.length === 0) return;
+        if (!fila.length) return;
+
+        const agora = Date.now();
+
+        fila = fila.map((f, i) => {
+            if (i === 0 && f.syncing && f.syncingAt && (agora - f.syncingAt > SYNC_STALE_MS)) {
+                return { ...f, syncing: false, syncingAt: null, lastError: "Reenvio após bloqueio antigo" };
+            }
+            return f;
+        });
+        localStorage.setItem('aliva_fila', JSON.stringify(fila));
+
+        const itemAtual = fila[0];
+        if (!itemAtual) return;
+        if (itemAtual.syncing) return;
+
+        fila[0] = {
+            ...itemAtual,
+            syncing: true,
+            syncingAt: agora,
+            lastError: null
+        };
+        localStorage.setItem('aliva_fila', JSON.stringify(fila));
+        atualizarFilaUI();
 
         isSyncing = true;
         const item = fila[0];
@@ -602,7 +643,7 @@
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
         try {
-            try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch(e) {}
+            try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch (e) {}
 
             doc.setFontSize(14);
             doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
@@ -628,19 +669,20 @@
                 columnStyles: { 1: { cellWidth: 130 } }
             });
 
-            item.anexos.forEach(img => {
+            (item.anexos || []).forEach(img => {
                 doc.addPage();
                 addImageFitPage(doc, img, 5);
             });
 
-            const metaObj = { ...item };
-            // Mantém os anexos também no meta para permitir edição noutro dispositivo.
-
+            const metaObj = { ...item, syncing: false, syncingAt: null, lastError: null };
             const base64 = doc.output('datauristring').split(',')[1];
-            const nomeLimpo = item.nome
+
+            const nomeLimpo = (item.nome || "sem-nome")
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-zA-Z0-9-_]/g, "-");
+                .replace(/[^a-zA-Z0-9-_]/g, "-")
+                .replace(/-+/g, "-")
+                .replace(/^-|-$/g, "");
 
             const nomeFicheiro = `Ficha_${nomeLimpo}`;
             const payload = {
@@ -660,19 +702,24 @@
             });
 
             const data = await res.json();
+            if (!data.ok) throw new Error(data.error || "Falha na sincronização.");
 
-            if (!data.ok) {
-                throw new Error(data.error || "Falha na sincronização.");
-            }
-
-            fila.shift();
-            localStorage.setItem('aliva_fila', JSON.stringify(fila));
+            let filaAtual = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+            filaAtual = filaAtual.filter(x => x.idLocal !== item.idLocal);
+            localStorage.setItem('aliva_fila', JSON.stringify(filaAtual));
 
             let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
-            delete cache[item.driveFileID || item.idLocal];
+            delete cache[item.idLocal];
+            if (item.driveFileID) delete cache[item.driveFileID];
 
             if (data.file && data.file.id) {
-                cache[data.file.id] = { ...item, driveFileID: data.file.id };
+                cache[data.file.id] = {
+                    ...item,
+                    driveFileID: data.file.id,
+                    syncing: false,
+                    syncingAt: null,
+                    lastError: null
+                };
             }
 
             localStorage.setItem('aliva_cache', JSON.stringify(cache));
@@ -682,8 +729,23 @@
             }
 
             atualizarFilaUI();
-        } catch(e) {
+        } catch (e) {
             console.error("Erro na sincronização:", e);
+
+            let filaErro = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+            const idx = filaErro.findIndex(x => x.idLocal === item.idLocal);
+
+            if (idx !== -1) {
+                filaErro[idx] = {
+                    ...filaErro[idx],
+                    syncing: false,
+                    syncingAt: null,
+                    lastError: e.message || "Erro na sincronização"
+                };
+                localStorage.setItem('aliva_fila', JSON.stringify(filaErro));
+            }
+
+            atualizarFilaUI();
         } finally {
             isSyncing = false;
         }
@@ -712,6 +774,7 @@
 
         anexos = [];
         renderAnexos();
+        document.getElementById('btnFinalizar').disabled = false;
         window.scrollTo(0,0);
     }
 </script>
