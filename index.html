@@ -552,7 +552,7 @@
 
         document.getElementById('sintomas').value = f.sintomas || "";
         document.getElementById('inicio').value = f.inicio || "";
-        anexos = f.anexos || [];
+        anexos = Array.isArray(f.anexos) ? f.anexos : [];
         renderAnexos();
         switchTab('aba-novo');
         window.scrollTo(0,0);
@@ -634,12 +634,12 @@
             });
 
             const metaObj = { ...item };
-            delete metaObj.anexos;
+            // Mantém os anexos também no meta para permitir edição noutro dispositivo.
 
             const base64 = doc.output('datauristring').split(',')[1];
             const nomeLimpo = item.nome
                 .normalize("NFD")
-                .replace(/[\\\\u0300-\\\\u036f]/g, "")
+                .replace(/[\u0300-\u036f]/g, "")
                 .replace(/[^a-zA-Z0-9-_]/g, "-");
 
             const nomeFicheiro = `Ficha_${nomeLimpo}`;
