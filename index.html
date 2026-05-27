@@ -485,7 +485,7 @@
                 };
             }
 
-            alert("🔒 PROTEÇÃO DE DADOS:\nComo esta ficha já foi arquivada, as fotos originais estão seladas no PDF.\n\nPara não as perder, será criada uma Adenda. O PDF antigo será mantido intacto.");
+            alert("🔒 PROTEÇÃO DE DADOS:\\nComo esta ficha já foi arquivada, as fotos originais estão seladas no PDF.\\n\\nPara não as perder, será criada uma Adenda. O PDF antigo será mantido intacto.");
 
             f.idLocal = Date.now();
             driveFileID = null;
@@ -639,7 +639,7 @@
             const base64 = doc.output('datauristring').split(',')[1];
             const nomeLimpo = item.nome
                 .normalize("NFD")
-                .replace(/[\\u0300-\\u036f]/g, "")
+                .replace(/[\\\\u0300-\\\\u036f]/g, "")
                 .replace(/[^a-zA-Z0-9-_]/g, "-");
 
             const nomeFicheiro = `Ficha_${nomeLimpo}`;
