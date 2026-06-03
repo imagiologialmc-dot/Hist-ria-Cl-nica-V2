@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Aliva Saúde — Gestão Clínica</title>
+  <title>Informação Clínica</title>
   <link rel="manifest" href="manifest.json?v=2"/>
   <meta name="theme-color" content="#2a7a9b"/>
   <link rel="icon" type="image/jpeg" href="icon-192.png?v=2">
@@ -97,94 +97,127 @@
       background:#e3f2fd; padding:12px; border-radius:10px; text-align:center;
       color:#0d47a1; font-weight:bold; margin-bottom:15px; border: 1px solid #bbdefb;
     }
+    
+    /* Estilos Login */
+    #login-container { max-width: 400px; margin: 40px auto; }
+    .forgot-pass { text-align: center; margin-top: 15px; font-size: 0.85rem; color: var(--aliva-escuro); cursor: pointer; text-decoration: underline; }
   </style>
 </head>
 <body>
 
-<header>
-  <img src="Hlogo.png" alt="Aliva Saúde" class="logo" id="mainLogo">
-</header>
-
-<div class="nav-tabs">
-  <button id="tab-novo" class="tab-btn active" onclick="switchTab('aba-novo')">Ficha Clínica</button>
-  <button id="tab-arquivo" class="tab-btn" onclick="switchTab('aba-arquivo')">Arquivo Digital</button>
+<div id="login-container" class="card" style="display: none;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <img src="Hlogo.png" alt="Informação Clínica" class="logo">
+  </div>
+  <div class="section-title" style="text-align: center;">Acesso Restrito à Equipa</div>
+  <div class="input-group">
+    <label>Email Profissional</label>
+    <input type="email" id="emailLogin" placeholder="exemplo@alivasaude.com">
+  </div>
+  <div class="input-group">
+    <label>Password</label>
+    <input type="password" id="passLogin">
+  </div>
+  <button id="btnEntrar" class="btn-primary">Entrar</button>
+  
+  <p id="login-erro" style="color: #d9534f; margin-top: 15px; display: none; text-align: center; font-weight: 600; font-size: 0.9rem;"></p>
+  <p id="login-msg" style="color: var(--aliva-escuro); margin-top: 15px; display: none; text-align: center; font-weight: 600; font-size: 0.9rem;"></p>
+  
+  <div class="forgot-pass" id="btnRecuperar">Esqueci-me da password</div>
 </div>
 
-<div id="aba-novo" class="aba-conteudo active">
-  <div class="card">
-    <div id="edit-indicator" class="hidden">✏️ MODO DE EDIÇÃO ATIVO</div>
+<div id="app-principal" style="display: none;">
 
-    <div class="section-title">Dados do Paciente</div>
-    <div class="input-group"><label>Nome Completo</label><input type="text" id="nome"></div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-      <div class="input-group"><label>Nascimento</label><input type="date" id="dataNasc"></div>
-      <div class="input-group"><label>ID / Processo</label><input type="text" id="idPaciente"></div>
-    </div>
-    <div class="input-group"><label>Exame Solicitado</label><input type="text" id="exame"></div>
+  <header>
+    <img src="Hlogo.png" alt="Informação Clínica" class="logo" id="mainLogo">
+  </header>
 
-    <div class="section-title">Questionário Clínico</div>
-    <div class="input-group"><label>Hipótese Diagnóstica</label><textarea id="hipotese" rows="2"></textarea></div>
-
-    <div class="input-group">
-      <label>Cirurgia Prévia?</label>
-      <div class="radio-group">
-        <input type="radio" name="cirurgia" id="cn" value="Não" checked onclick="toggleC('gc', false)"><label for="cn">Não</label>
-        <input type="radio" name="cirurgia" id="cs" value="Sim" onclick="toggleC('gc', true)"><label for="cs">Sim</label>
-      </div>
-      <div id="gc" class="conditional-field"><input type="text" id="cir_det" placeholder="Qual e quando?"></div>
-    </div>
-
-    <div class="input-group">
-      <label>Quimio ou Radioterapia?</label>
-      <div class="radio-group">
-        <input type="radio" name="quimio" id="qn" value="Não" checked onclick="toggleC('gq', false)"><label for="qn">Não</label>
-        <input type="radio" name="quimio" id="qs" value="Sim" onclick="toggleC('gq', true)"><label for="qs">Sim</label>
-      </div>
-      <div id="gq" class="conditional-field"><input type="text" id="q_det" placeholder="Detalhes das sessões"></div>
-    </div>
-
-    <div class="input-group">
-      <label>Trauma Local?</label>
-      <div class="radio-group">
-        <input type="radio" name="trauma" id="tn" value="Não" checked onclick="toggleC('gt', false)"><label for="tn">Não</label>
-        <input type="radio" name="trauma" id="ts" value="Sim" onclick="toggleC('gt', true)"><label for="ts">Sim</label>
-      </div>
-      <div id="gt" class="conditional-field"><input type="text" id="t_det" placeholder="Descreva o trauma"></div>
-    </div>
-
-    <div class="input-group"><label>Febre ou Outros Sintomas?</label><input type="text" id="sintomas"></div>
-    <div class="input-group"><label>Início dos Sintomas (Tempo)</label><input type="text" id="inicio"></div>
-
-    <div class="section-title">Anexos</div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
-      <button class="btn-secondary" style="margin:0; border-color:var(--aliva-claro); color:var(--aliva-escuro);" onclick="document.getElementById('camInputScan').click()">📸 Digitalizar</button>
-      <button class="btn-secondary" style="margin:0; border-color:var(--aliva-claro); color:var(--aliva-escuro);" onclick="document.getElementById('camInputDirect').click()">📎 Anexar Direto</button>
-    </div>
-
-    <input type="file" id="camInputScan" accept="image/*" capture="environment" class="hidden">
-    <input type="file" id="camInputDirect" accept="image/*" class="hidden">
-
-    <div id="preview-container"></div>
-
-    <button id="btnFinalizar" class="btn-primary" onclick="finalizarRegisto()">Finalizar e Sincronizar</button>
-    <button id="btnPartilharPdf" class="btn-secondary" onclick="gerarOuPartilharPDF()">📄 Gerar PDF / Partilhar</button>
-    <button class="btn-secondary hidden" id="btnCancelar" onclick="resetForm()">Sair sem Guardar</button>
+  <div class="nav-tabs">
+    <button id="tab-novo" class="tab-btn active" onclick="switchTab('aba-novo')">Ficha Clínica</button>
+    <button id="tab-arquivo" class="tab-btn" onclick="switchTab('aba-arquivo')">Arquivo Digital</button>
   </div>
 
-  <div class="card hidden" id="container-pendentes">
-    <div style="font-size:0.9rem; color:#666; font-weight:bold; margin-bottom:10px;">⏳ Pendentes de Envio</div>
-    <div id="lista-pendentes"></div>
-  </div>
-</div>
+  <div id="aba-novo" class="aba-conteudo active">
+    <div class="card">
+      <div id="edit-indicator" class="hidden">✏️ MODO DE EDIÇÃO ATIVO</div>
 
-<div id="aba-arquivo" class="aba-conteudo">
-  <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-      <h2 style="color:var(--aliva-escuro)">Arquivo Digital</h2>
-      <button onclick="carregarOnline()" class="action-btn">🔄</button>
+      <div class="section-title">Dados do Paciente</div>
+      <div class="input-group"><label>Nome Completo</label><input type="text" id="nome"></div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div class="input-group"><label>Nascimento</label><input type="date" id="dataNasc"></div>
+        <div class="input-group"><label>ID / Processo</label><input type="text" id="idPaciente"></div>
+      </div>
+      <div class="input-group"><label>Exame Solicitado</label><input type="text" id="exame"></div>
+
+      <div class="section-title">Questionário Clínico</div>
+      <div class="input-group"><label>Hipótese Diagnóstica</label><textarea id="hipotese" rows="2"></textarea></div>
+
+      <div class="input-group">
+        <label>Cirurgia Prévia?</label>
+        <div class="radio-group">
+          <input type="radio" name="cirurgia" id="cn" value="Não" checked onclick="toggleC('gc', false)"><label for="cn">Não</label>
+          <input type="radio" name="cirurgia" id="cs" value="Sim" onclick="toggleC('gc', true)"><label for="cs">Sim</label>
+        </div>
+        <div id="gc" class="conditional-field"><input type="text" id="cir_det" placeholder="Qual e quando?"></div>
+      </div>
+
+      <div class="input-group">
+        <label>Quimio ou Radioterapia?</label>
+        <div class="radio-group">
+          <input type="radio" name="quimio" id="qn" value="Não" checked onclick="toggleC('gq', false)"><label for="qn">Não</label>
+          <input type="radio" name="quimio" id="qs" value="Sim" onclick="toggleC('gq', true)"><label for="qs">Sim</label>
+        </div>
+        <div id="gq" class="conditional-field"><input type="text" id="q_det" placeholder="Detalhes das sessões"></div>
+      </div>
+
+      <div class="input-group">
+        <label>Trauma Local?</label>
+        <div class="radio-group">
+          <input type="radio" name="trauma" id="tn" value="Não" checked onclick="toggleC('gt', false)"><label for="tn">Não</label>
+          <input type="radio" name="trauma" id="ts" value="Sim" onclick="toggleC('gt', true)"><label for="ts">Sim</label>
+        </div>
+        <div id="gt" class="conditional-field"><input type="text" id="t_det" placeholder="Descreva o trauma"></div>
+      </div>
+
+      <div class="input-group"><label>Febre ou Outros Sintomas?</label><input type="text" id="sintomas"></div>
+      <div class="input-group"><label>Início dos Sintomas (Tempo)</label><input type="text" id="inicio"></div>
+
+      <div class="section-title">Anexos</div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+        <button class="btn-secondary" style="margin:0; border-color:var(--aliva-claro); color:var(--aliva-escuro);" onclick="document.getElementById('camInputScan').click()">📸 Digitalizar</button>
+        <button class="btn-secondary" style="margin:0; border-color:var(--aliva-claro); color:var(--aliva-escuro);" onclick="document.getElementById('camInputDirect').click()">📎 Anexar Direto</button>
+      </div>
+
+      <input type="file" id="camInputScan" accept="image/*" capture="environment" class="hidden">
+      <input type="file" id="camInputDirect" accept="image/*" class="hidden">
+
+      <div id="preview-container"></div>
+
+      <button id="btnFinalizar" class="btn-primary" onclick="finalizarRegisto()">Finalizar e Sincronizar</button>
+      <button id="btnPartilharPdf" class="btn-secondary" onclick="gerarOuPartilharPDF()">📄 Gerar PDF / Partilhar</button>
+      <button class="btn-secondary hidden" id="btnCancelar" onclick="resetForm()">Sair sem Guardar</button>
     </div>
-    <div id="lista-online">A carregar...</div>
+
+    <div class="card hidden" id="container-pendentes">
+      <div style="font-size:0.9rem; color:#666; font-weight:bold; margin-bottom:10px;">⏳ Pendentes de Envio</div>
+      <div id="lista-pendentes"></div>
+    </div>
   </div>
+
+  <div id="aba-arquivo" class="aba-conteudo">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h2 style="color:var(--aliva-escuro)">Arquivo Digital</h2>
+        <button onclick="carregarOnline()" class="action-btn">🔄</button>
+      </div>
+      <div id="lista-online">A carregar...</div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-bottom: 30px;">
+    <button id="btnSair" class="btn-secondary" style="max-width: 200px;">Terminar Sessão</button>
+  </div>
+
 </div>
 
 <div id="scanner-overlay">
@@ -808,10 +841,13 @@
 
       const base64 = doc.output('datauristring').split(',')[1];
       const nomeFicheiro = gerarNomeFicheiro(item.nome).replace(/\.pdf$/i, '');
+      
+      // CARLOS: Aqui a aplicação junta o email de quem está autenticado ao envio para o GAS
       const payload = {
         nome: nomeFicheiro,
         pdf: base64,
         oldID: item.driveFileID || null,
+        tecnico: window.tecnicoLogado || "Não autenticado",
         meta: JSON.stringify(metaObj)
       };
 
@@ -900,6 +936,112 @@
     document.getElementById('btnFinalizar').disabled = false;
     window.scrollTo(0,0);
   }
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut,
+    sendPasswordResetEmail
+  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+  // Configuração extraída da tua consola Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyCwmnz5QIr5c5-AsD01yGTq0SmNt8iaiuE",
+    authDomain: "alivainformacaoclinica.firebaseapp.com",
+    projectId: "alivainformacaoclinica",
+    storageBucket: "alivainformacaoclinica.firebasestorage.app",
+    messagingSenderId: "1057548833232",
+    appId: "1:1057548833232:web:d3f17af9722b4c733769d5",
+    measurementId: "G-M98S3P5VPN"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const loginContainer = document.getElementById('login-container');
+  const appPrincipal = document.getElementById('app-principal');
+  const emailLogin = document.getElementById('emailLogin');
+  const passLogin = document.getElementById('passLogin');
+  const btnEntrar = document.getElementById('btnEntrar');
+  const btnSair = document.getElementById('btnSair');
+  const btnRecuperar = document.getElementById('btnRecuperar');
+  const erroMsg = document.getElementById('login-erro');
+  const infoMsg = document.getElementById('login-msg');
+
+  // Gestão de Estado de Sessão
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      loginContainer.style.display = 'none';
+      appPrincipal.style.display = 'block';
+      window.tecnicoLogado = user.email; // Variável utilizada pela submissão do GAS
+    } else {
+      loginContainer.style.display = 'block';
+      appPrincipal.style.display = 'none';
+      window.tecnicoLogado = null;
+    }
+  });
+
+  // Ação de Login
+  btnEntrar.addEventListener('click', async () => {
+    const email = emailLogin.value.trim();
+    const password = passLogin.value;
+    
+    erroMsg.style.display = 'none';
+    infoMsg.style.display = 'none';
+
+    if (!email || !password) {
+      erroMsg.innerText = "Por favor, preenche o email e a password.";
+      erroMsg.style.display = 'block';
+      return;
+    }
+
+    btnEntrar.disabled = true;
+    btnEntrar.innerText = 'A validar...';
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      erroMsg.innerText = "Credenciais inválidas. Tenta novamente.";
+      erroMsg.style.display = 'block';
+      console.error(error.code, error.message);
+    } finally {
+      btnEntrar.disabled = false;
+      btnEntrar.innerText = 'Entrar';
+    }
+  });
+
+  // Ação de Recuperação de Password
+  btnRecuperar.addEventListener('click', async () => {
+    const email = emailLogin.value.trim();
+    
+    erroMsg.style.display = 'none';
+    infoMsg.style.display = 'none';
+
+    if (!email) {
+      erroMsg.innerText = "Insere o teu email profissional no campo acima para recuperar a password.";
+      erroMsg.style.display = 'block';
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      infoMsg.innerText = "As instruções foram enviadas para o teu email.";
+      infoMsg.style.display = 'block';
+    } catch (error) {
+      erroMsg.innerText = "Erro ao enviar o pedido. Verifica se o email está correto.";
+      erroMsg.style.display = 'block';
+      console.error(error.code, error.message);
+    }
+  });
+
+  // Ação de Logout
+  btnSair.addEventListener('click', () => {
+    signOut(auth).catch((error) => console.error("Erro ao sair:", error));
+  });
 </script>
 </body>
 </html>
