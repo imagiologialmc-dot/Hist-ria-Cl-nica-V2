@@ -238,6 +238,23 @@
   let isSyncing = false;
   const SYNC_STALE_MS = 2 * 60 * 1000;
 
+  // Tabela de mapeamento: Email -> Nome
+  const equipaAliva = {
+    "ana.muangu@alivasaude.com": { nome: "Ana Muangu", assinaturaBase64: null },
+    "joaquim.gumba@alivasaude.com": { nome: "Joaquim Gumba", assinaturaBase64: null },
+    "irene.simao@alivasaude.com": { nome: "Irene Simão", assinaturaBase64: null },
+    "aleixa.caluyombo@alivasaude.com": { nome: "Aleixa Caluyombo", assinaturaBase64: null },
+    "isaias.joao@alivasaude.com": { nome: "Isaías João", assinaturaBase64: null },
+    "helio.paulo@alivasaude.com": { nome: "Hélio Paulo", assinaturaBase64: null },
+    "manzanza.ndombaxi@alivasaude.com": { nome: "Manzanza Ndombaxi", assinaturaBase64: null },
+    "marcelina.pereira@alivasaude.com": { nome: "Marcelina Pereira", assinaturaBase64: null },
+    "jalusa.fernandes@alivasaude.com": { nome: "Jalusa Fernandes", assinaturaBase64: null },
+    "dalaia.zua@alivasaude.com": { nome: "Dalaia Zua", assinaturaBase64: null },
+    "ana.baiao@alivasaude.com": { nome: "Ana Baião", assinaturaBase64: null },
+    "paula.paulo@alivasaude.com": { nome: "Paula Paulo", assinaturaBase64: null },
+    "rodrigues.ngola@alivasaude.com": { nome: "Rodrigues Ngola", assinaturaBase64: null }
+  };
+  
   window.onload = () => {
     atualizarFilaUI();
     carregarOnline();
@@ -505,6 +522,39 @@
       columnStyles: { 1: { cellWidth: 130 } }
     });
 
+    // --- NOVA SECÇÃO: ASSINATURA DO TÉCNICO ---
+    // Identificar a altura final onde a tabela terminou na página
+    const alturaFinalTabela = doc.lastAutoTable.finalY || 150; 
+    
+    // Obter dados do técnico logado
+    const emailLogado = window.tecnicoLogado;
+    let dadosTecnico = { nome: "Técnico Não Autenticado", assinaturaBase64: null };
+    
+    if (emailLogado && typeof equipaAliva !== 'undefined' && equipaAliva[emailLogado]) {
+      dadosTecnico = equipaAliva[emailLogado];
+    } else if (emailLogado) {
+      dadosTecnico.nome = emailLogado; // Se for um email que ainda não está no dicionário
+    }
+
+    // Desenhar o bloco de assinatura no PDF
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Técnico Responsável:", 14, alturaFinalTabela + 15);
+    
+    if (dadosTecnico.assinaturaBase64) {
+      // Desenha a imagem da assinatura se existir
+      doc.addImage(dadosTecnico.assinaturaBase64, 'PNG', 14, alturaFinalTabela + 20, 40, 15);
+      doc.setFont("helvetica", "normal");
+      doc.text(dadosTecnico.nome, 14, alturaFinalTabela + 42);
+    } else {
+      // Escreve o nome em itálico caso não haja imagem
+      doc.setFont("helvetica", "italic");
+      doc.text(dadosTecnico.nome, 14, alturaFinalTabela + 25);
+      doc.setFont("helvetica", "normal");
+    }
+    // ------------------------------------------
+
+    // Adiciona as páginas extra para os anexos fotográficos (Guias, Requisições, etc.)
     (item.anexos || []).forEach(img => {
       doc.addPage();
       addImageFitPage(doc, img, 5);
@@ -512,7 +562,7 @@
 
     return doc;
   }
-
+  
   function gerarNomeFicheiro(nome) {
     const nomeLimpo = (nome || "sem-nome")
       .normalize("NFD")
