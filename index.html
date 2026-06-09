@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Informação Clínica</title>
+  <link rel="manifest" href="manifest.json?v=3"/>
+  <meta name="theme-color" content="#2AA8A8"/>
+  <link rel="icon" type="image/png" href="icon-192.png?v=3">
+  <link rel="apple-touch-icon" href="icon-192.png?v=3">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript"></script>
+
+  <script src="exames.js"></script>
+  <script src="cid10.js"></script>
+
+  <style>
+    :root {
+      --primary: #2AA8A8;
+      --secondary: #2D6E8E;
+      --bg: #f0f4f7;
+      --surface: #ffffff;
+      --text-main: #333333;
+      --text-muted: #666666;
+      --border: #dddddd;
+      --card-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      --pendente: #fff3cd;
+      --pendente-txt: #856404;
+      --erro: #f8d7da;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      padding: 10px;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    .brand-text { font-family: 'Montserrat', sans-serif; font-weight: 800; letter-spacing: -0.5px; }
+
+    header { text-align: center; padding: 10px 0; }
+    .logo { max-width: 160px; height: auto; }
+
+    .nav-tabs { display: flex; gap: 8px; max-width: 800px; margin: 0 auto 15px auto; }
+    .tab-btn {
+      flex: 1; padding: 14px; border: 2px solid var(--border); border-radius: 12px;
+      background: var(--surface); color: var(--text-muted); font-weight: 700; font-size: 13px;
+      cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .card {
+      background: var(--surface); border-radius: 12px; padding: 20px; max-width: 800px;
+      margin: 0 auto 16px auto; box-shadow: var(--card-shadow);
+      border: 1px solid var(--border); border-left: 4px solid var(--primary);
+      text-align: left; transition: background 0.3s;
+    }
+
+    .aba-conteudo { display: none; }
+    .aba-conteudo.active { display: block; }
+
+    .section-title {
+      font-size: 14px; font-weight: 700; color: var(--primary);
+      margin: 20px 0 12px 0; display: flex; align-items: center; gap: 6px;
+    }
+
+    .input-group { margin-bottom: 15px; }
+    label {
+      font-size: 13px; font-weight: 700; color: var(--primary);
+      margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    input, textarea, select {
+      width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 10px;
+      border: 1px solid var(--border); outline: none; font-size: 14px;
+      background: var(--bg); color: var(--text-main); transition: 0.3s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+    textarea { resize: none; min-height: 80px; }
+
+    .radio-group { display: flex; gap: 8px; margin-bottom: 8px; }
+    .radio-group input { display: none; }
+    .radio-group label {
+      flex: 1; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: all 0.3s ease; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-muted); text-align: center;
+    }
+    .radio-group input:checked + label { background: var(--primary); color: white; border-color: var(--primary); }
+    .conditional-field { display: none; margin-top: 5px; }
+
+    .btn-primary {
+      width: 100%; padding: 15px; background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 14px;
+      cursor: pointer; margin-top: 15px; transition: 0.2s; display: inline-flex;
+      align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:disabled { background: #888; cursor: not-allowed; opacity: 0.7; }
+
+    .btn-secondary {
+      width: 100%; padding: 12px; border: 2px solid var(--primary); border-radius: 12px;
+      font-weight: 700; font-size: 13px; cursor: pointer; background: transparent;
+      color: var(--primary); margin-top: 10px; display: inline-flex;
+      align-items: center; justify-content: center; gap: 8px; transition: 0.3s;
+    }
+    .btn-secondary:hover { background: var(--primary); color: white; }
+
+    .item-registo {
+      display: flex; justify-content: space-between; align-items: center; padding: 14px 16px;
+      border-radius: 10px; margin-bottom: 10px; background: var(--bg);
+      border: 1px solid var(--border); transition: 0.3s;
+    }
+
+    .action-btn {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; padding: 5px; transition: color 0.2s; display: inline-flex;
+      align-items: center; justify-content: center;
+    }
+    .action-btn .material-symbols-rounded { font-size: 22px; }
+    .action-btn:hover { color: var(--primary); }
+    .action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    #scanner-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #000; display: none; flex-direction: column; z-index: 10000;
+    }
+    #preview-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .thumb {
+      width: 65px; height: 85px; object-fit: cover; border-radius: 6px;
+      border: 2px solid var(--primary); cursor: pointer; box-shadow: var(--card-shadow);
+    }
+    .thumb-pdf {
+      width: 65px; height: 85px; border-radius: 6px;
+      border: 2px solid var(--secondary); cursor: pointer; box-shadow: var(--card-shadow);
+      background: var(--surface); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 4px;
+      font-size: 10px; font-weight: 700; color: var(--secondary); text-align: center; padding: 4px;
+    }
+    .thumb-pdf .material-symbols-rounded { font-size: 28px; }
+    .hidden { display: none !important; }
+
+    #edit-indicator {
+      background: #e0f2f1; padding: 12px; border-radius: 10px; text-align: center;
+      color: #00695c; font-weight: bold; font-size: 13px; margin-bottom: 15px;
+      border: 1px solid #b2dfdb; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    #login-container { max-width: 360px; margin: 40px auto; text-align: center; }
+    .forgot-pass {
+      text-align: center; margin-top: 15px; font-size: 13px; color: var(--primary);
+      cursor: pointer; text-decoration: underline; font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<div id="login-container" class="card" style="display: none;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <img src="Hlogo.png?v=3" alt="Informação Clínica" class="logo">
+  </div>
+  <div class="section-title" style="text-align: center; justify-content: center;"><span class="material-symbols-rounded">lock</span> Acesso Restrito à Equipa</div>
+  
+  <div class="input-group">
+    <label><span class="material-symbols-rounded" style="font-size: 18px;">person</span> Utilizador</label>
+    <input type="text" id="emailLogin" placeholder="nome.apelido (ex: jalusa.fernandes)" autocapitalize="none">
+  </div>
+  
+  <div class="input-group">
+    <label><span class="material-symbols-rounded" style="font-size: 18px;">key</span> Password</label>
+    <input type="password" id="passLogin">
+  </div>
+  <button id="btnEntrar" class="btn-primary"><span class="material-symbols-rounded">login</span> Entrar</button>
+  <p id="login-erro" style="color: var(--erro); margin-top: 15px; display: none; text-align: center; font-weight: 600; font-size: 0.9rem;"></p>
+  <p id="login-msg" style="color: var(--primary); margin-top: 15px; display: none; text-align: center; font-weight: 600; font-size: 0.9rem;"></p>
+  <div class="forgot-pass" id="btnRecuperar">Esqueci-me da password</div>
+</div>
+
+<div id="app-principal" style="display: none;">
+
+  <header>
+    <img src="Hlogo.png?v=3" alt="Informação Clínica" class="logo" id="mainLogo">
+  </header>
+
+  <div class="nav-tabs">
+    <button id="tab-novo" class="tab-btn active" onclick="switchTab('aba-novo')"><span class="material-symbols-rounded" style="font-size: 18px;">post_add</span> Ficha Clínica</button>
+    <button id="tab-arquivo" class="tab-btn" onclick="switchTab('aba-arquivo')"><span class="material-symbols-rounded" style="font-size: 18px;">folder_open</span> Arquivo Digital</button>
+  </div>
+
+  <div id="aba-novo" class="aba-conteudo active">
+    <div class="card">
+      <div id="edit-indicator" class="hidden"><span class="material-symbols-rounded">edit</span> MODO DE EDIÇÃO ATIVO</div>
+
+      <div class="section-title"><span class="material-symbols-rounded">person</span> Dados do Paciente</div>
+      <div class="input-group"><label>Nome Completo</label><input type="text" id="nome"></div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div class="input-group"><label>Nascimento</label><input type="date" id="dataNasc"></div>
+        <div class="input-group"><label>ID / Processo</label><input type="text" id="idPaciente"></div>
+      </div>
+
+      <div class="input-group">
+        <label>Exame Solicitado</label>
+        <input type="text" id="exame" list="listaExames" placeholder="Pesquisar exame ou código..." autocomplete="off">
+        <datalist id="listaExames"></datalist>
+      </div>
+
+      <div class="section-title"><span class="material-symbols-rounded">medical_information</span> Questionário Clínico</div>
+
+      <div class="input-group">
+        <label>Hipótese Diagnóstica</label>
+        <input type="text" id="hipotese" list="listaCid" placeholder="Pesquisar CID-10 ou patologia..." autocomplete="off">
+        <datalist id="listaCid"></datalist>
+      </div>
+
+      <div class="input-group">
+        <label>Cirurgia Prévia?</label>
+        <div class="radio-group">
+          <input type="radio" name="cirurgia" id="cn" value="Não" checked onclick="toggleC('gc', false)"><label for="cn">Não</label>
+          <input type="radio" name="cirurgia" id="cs" value="Sim" onclick="toggleC('gc', true)"><label for="cs">Sim</label>
+        </div>
+        <div id="gc" class="conditional-field"><input type="text" id="cir_det" placeholder="Qual e quando?"></div>
+      </div>
+
+      <div class="input-group">
+        <label>Quimio ou Radioterapia?</label>
+        <div class="radio-group">
+          <input type="radio" name="quimio" id="qn" value="Não" checked onclick="toggleC('gq', false)"><label for="qn">Não</label>
+          <input type="radio" name="quimio" id="qs" value="Sim" onclick="toggleC('gq', true)"><label for="qs">Sim</label>
+        </div>
+        <div id="gq" class="conditional-field"><input type="text" id="q_det" placeholder="Detalhes das sessões"></div>
+      </div>
+
+      <div class="input-group">
+        <label>Trauma Local?</label>
+        <div class="radio-group">
+          <input type="radio" name="trauma" id="tn" value="Não" checked onclick="toggleC('gt', false)"><label for="tn">Não</label>
+          <input type="radio" name="trauma" id="ts" value="Sim" onclick="toggleC('gt', true)"><label for="ts">Sim</label>
+        </div>
+        <div id="gt" class="conditional-field"><input type="text" id="t_det" placeholder="Descreva o trauma"></div>
+      </div>
+
+      <div class="input-group"><label>Febre ou Outros Sintomas?</label><input type="text" id="sintomas"></div>
+      <div class="input-group"><label>Início dos Sintomas (Tempo)</label><input type="text" id="inicio"></div>
+
+      <div class="section-title"><span class="material-symbols-rounded">attach_file</span> Anexos</div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+        <button class="btn-secondary" style="margin:0;" onclick="document.getElementById('camInputScan').click()"><span class="material-symbols-rounded">photo_camera</span> Digitalizar</button>
+        <button class="btn-secondary" style="margin:0;" onclick="document.getElementById('camInputDirect').click()"><span class="material-symbols-rounded">attachment</span> Anexar Direto</button>
+      </div>
+
+      <input type="file" id="camInputScan" accept="image/*" capture="environment" class="hidden">
+      <input type="file" id="camInputDirect" accept="image/*,application/pdf" class="hidden">
+
+      <div id="preview-container"></div>
+
+      <button id="btnFinalizar" class="btn-primary" onclick="finalizarRegisto()"><span class="material-symbols-rounded">cloud_sync</span> Finalizar e Sincronizar</button>
+      <button id="btnPartilharPdf" class="btn-secondary" onclick="gerarOuPartilharPDF()"><span class="material-symbols-rounded">picture_as_pdf</span> Gerar PDF / Partilhar</button>
+      <button class="btn-secondary hidden" id="btnCancelar" onclick="resetForm()" style="border-color: #e74c3c; color: #e74c3c;"><span class="material-symbols-rounded">close</span> Sair sem Guardar</button>
+    </div>
+
+    <div class="card hidden" id="container-pendentes" style="border-left-color: #FFD700;">
+      <div style="font-size:0.9rem; color:var(--text-muted); font-weight:bold; margin-bottom:10px; display:flex; align-items:center; gap:6px;"><span class="material-symbols-rounded">hourglass_empty</span> Pendentes de Envio</div>
+      <div id="lista-pendentes"></div>
+    </div>
+  </div>
+
+  <div id="aba-arquivo" class="aba-conteudo">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h2 style="color:var(--primary); font-size: 16px; display: flex; align-items: center; gap: 6px;"><span class="material-symbols-rounded">cloud_done</span> Arquivo Digital</h2>
+        <button onclick="carregarOnline()" class="action-btn" title="Atualizar"><span class="material-symbols-rounded">sync</span></button>
+      </div>
+      <div id="lista-online" style="font-size: 13px; color: var(--text-muted);"><span class="material-symbols-rounded" style="font-size: 18px; vertical-align: middle;">sync</span> A carregar...</div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-bottom: 30px;">
+    <button id="btnSair" class="btn-secondary" style="max-width: 200px; border-color: var(--border); color: var(--text-muted);"><span class="material-symbols-rounded">logout</span> Terminar Sessão</button>
+  </div>
+
+</div>
+
+<div id="scanner-overlay">
+  <div id="scanner-ui-cont" style="position:relative; flex:1; display:flex; align-items:center; justify-content:center; touch-action:none; overflow:hidden;">
+    <canvas id="canvas-ui"></canvas>
+  </div>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; padding:15px; background:#1a1a1a; padding-bottom: max(15px, env(safe-area-inset-bottom));">
+    <button class="btn-primary" style="background:#444; margin:0;" onclick="fecharScanner()"><span class="material-symbols-rounded">close</span> Sair</button>
+    <button class="btn-primary" style="background:var(--secondary); margin:0;" onclick="rodarImagem90()"><span class="material-symbols-rounded">rotate_right</span> Rodar 90°</button>
+    <button class="btn-primary" style="margin:0; grid-column: span 2;" onclick="processarScan()"><span class="material-symbols-rounded">auto_fix_high</span> Realçar Documento</button>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9xfW5yq16Y-SqA8mVMAFEw2E4ndSLpZgytw7CFuxnVngb7gdBqy1nylOdjT8vIEY/exec";
+
+  let anexos = [];      
+  let anexosPdf = [];   
+  let pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
+  let isSyncing = false;
+  const SYNC_STALE_MS = 2 * 60 * 1000;
+
+  const equipaAliva = {
+    "ana.muangu@alivasaude.com": { nome: "Ana Muangu", assinaturaBase64: null },
+    "joaquim.gumba@alivasaude.com": { nome: "Joaquim Gumba", assinaturaBase64: null },
+    "irene.simao@alivasaude.com": { nome: "Irene Simão", assinaturaBase64: null },
+    "aleixa.caluyombo@alivasaude.com": { nome: "Aleixa Caluyombo", assinaturaBase64: null },
+    "isaias.joao@alivasaude.com": { nome: "Isaías João", assinaturaBase64: null },
+    "helio.paulo@alivasaude.com": { nome: "Hélio Paulo", assinaturaBase64: null },
+    "manzanza.ndombaxi@alivasaude.com": { nome: "Manzanza Ndombaxi", assinaturaBase64: null },
+    "marcelina.pereira@alivasaude.com": { nome: "Marcelina Pereira", assinaturaBase64: null },
+    "jalusa.fernandes@alivasaude.com": { nome: "Jalusa Fernandes", assinaturaBase64: null },
+    "dalaia.zua@alivasaude.com": { nome: "Dalaia Zua", assinaturaBase64: null },
+    "ana.baiao@alivasaude.com": { nome: "Ana Baião", assinaturaBase64: null },
+    "paula.paulo@alivasaude.com": { nome: "Paula Paulo", assinaturaBase64: null },
+    "rodrigues.ngola@alivasaude.com": { nome: "Rodrigues Ngola", assinaturaBase64: null }
+  };
+
+  function comprimirImagem(dataUrl, maxWidth, maxHeight, quality, callback) {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxWidth || h > maxHeight) {
+        const ratio = Math.min(maxWidth / w, maxHeight / h);
+        w *= ratio; 
+        h *= ratio;
+      }
+      canvas.width = w; 
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  }
+
+  async function fetchComTimeout(resource, options = {}) {
+    const { timeout = 120000 } = options; 
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    const response = await fetch(resource, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  }
+
+  function salvarRascunho() {
+    if (editandoID) return;
+    const rascunho = {
+      nome: document.getElementById('nome').value,
+      dataNasc: document.getElementById('dataNasc').value,
+      idPaciente: document.getElementById('idPaciente').value,
+      exame: document.getElementById('exame').value,
+      hipotese: document.getElementById('hipotese').value,
+      cirurgia: document.querySelector('input[name="cirurgia"]:checked')?.value || 'Não',
+      cir_det: document.getElementById('cir_det').value,
+      quimio: document.querySelector('input[name="quimio"]:checked')?.value || 'Não',
+      q_det: document.getElementById('q_det').value,
+      trauma: document.querySelector('input[name="trauma"]:checked')?.value || 'Não',
+      t_det: document.getElementById('t_det').value,
+      sintomas: document.getElementById('sintomas').value,
+      inicio: document.getElementById('inicio').value
+    };
+    localStorage.setItem('aliva_rascunho', JSON.stringify(rascunho));
+  }
+
+  function carregarRascunho() {
+    if (editandoID) return;
+    const rascunhoStr = localStorage.getItem('aliva_rascunho');
+    if (!rascunhoStr) return;
+    try {
+      const f = JSON.parse(rascunhoStr);
+      document.getElementById('nome').value = f.nome || '';
+      document.getElementById('dataNasc').value = f.dataNasc || '';
+      document.getElementById('idPaciente').value = f.idPaciente || '';
+      document.getElementById('exame').value = f.exame || '';
+      document.getElementById('hipotese').value = f.hipotese || '';
+
+      if (f.cirurgia === "Sim") { document.getElementById('cs').checked = true; toggleC('gc', true); document.getElementById('cir_det').value = f.cir_det || ""; }
+      if (f.quimio === "Sim") { document.getElementById('qs').checked = true; toggleC('gq', true); document.getElementById('q_det').value = f.q_det || ""; }
+      if (f.trauma === "Sim") { document.getElementById('ts').checked = true; toggleC('gt', true); document.getElementById('t_det').value = f.t_det || ""; }
+
+      document.getElementById('sintomas').value = f.sintomas || '';
+      document.getElementById('inicio').value = f.inicio || '';
+    } catch(e) {
+      console.error("Erro ao carregar rascunho", e);
+    }
+  }
+
+  function carregarListasBase() {
+    const dlExames = document.getElementById('listaExames');
+    const dlCid = document.getElementById('listaCid');
+    if (typeof listaCompletaExames !== 'undefined') {
+      dlExames.innerHTML = listaCompletaExames.map(x => `<option value="${x}">`).join('');
+    }
+    if (typeof listaCompletaCID !== 'undefined') {
+      dlCid.innerHTML = listaCompletaCID.map(x => `<option value="${x}">`).join('');
+    }
+  }
+
+  window.onload = () => {
+    carregarListasBase();
+    atualizarFilaUI();
+    carregarOnline();
+    carregarRascunho();
+    
+    document.getElementById('aba-novo').addEventListener('input', salvarRascunho);
+    
+    setInterval(syncProcess, 5000);
+  };
+
+  function toggleC(id, s) {
+    document.getElementById(id).style.display = s ? 'block' : 'none';
+  }
+
+  function switchTab(id) {
+    document.querySelectorAll('.aba-conteudo, .tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById('tab-' + id.split('-')[1]).classList.add('active');
+    if (id === 'aba-arquivo') carregarOnline();
+  }
+
+  // --- CORREÇÃO DO SCANNER --- 
+
+  document.getElementById('camInputScan').addEventListener('change', function(e) {
+    if (!e.target.files[0]) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const i = new Image();
+      i.onload = () => {
+        // Normaliza a imagem antes de entrar no scanner (remove os metadados EXIF)
+        const tempC = document.createElement('canvas');
+        let w = i.width, h = i.height;
+        const MAX_W = 2000, MAX_H = 2000;
+        if (w > MAX_W || h > MAX_H) {
+          const ratio = Math.min(MAX_W / w, MAX_H / h);
+          w *= ratio; h *= ratio;
+        }
+        tempC.width = w; tempC.height = h;
+        tempC.getContext('2d').drawImage(i, 0, 0, w, h);
+
+        const imgNormalizada = new Image();
+        imgNormalizada.onload = () => abrirScanner(imgNormalizada);
+        imgNormalizada.src = tempC.toDataURL('image/jpeg', 0.9);
+      };
+      i.src = ev.target.result;
+    };
+    r.readAsDataURL(e.target.files[0]);
+    e.target.value = "";
+  });
+
+  document.getElementById('camInputDirect').addEventListener('change', function(e) {
+    if (!e.target.files[0]) return;
+    const ficheiro = e.target.files[0];
+    const r = new FileReader();
+    
+    r.onload = ev => {
+      if (ficheiro.type === 'application/pdf') {
+        anexosPdf.push({ nome: ficheiro.name, base64: ev.target.result.split(',')[1] });
+        renderAnexos();
+      } else if (ficheiro.type.startsWith('image/')) {
+        comprimirImagem(ev.target.result, 1200, 1200, 0.7, (imgComprimida) => {
+          anexos.push(imgComprimida);
+          renderAnexos();
+        });
+      }
+    };
+    r.readAsDataURL(ficheiro);
+    e.target.value = "";
+  });
+
+  function abrirScanner(img) {
+    imgTemp = img;
+    document.getElementById('scanner-overlay').style.display = 'flex';
+    const canvas = document.getElementById('canvas-ui');
+    const maxW = window.innerWidth * 0.95, maxH = window.innerHeight * 0.75;
+    escalaVisual = Math.min(maxW / img.width, maxH / img.height);
+    canvas.width = img.width * escalaVisual;
+    canvas.height = img.height * escalaVisual;
+    const w = canvas.width, h = canvas.height;
+    pontos = [
+      {x:w*0.1,y:h*0.1},
+      {x:w*0.9,y:h*0.1},
+      {x:w*0.9,y:h*0.9},
+      {x:w*0.1,y:h*0.9}
+    ];
+    desenharUI();
+
+    canvas.ontouchstart = canvas.onmousedown = e => {
+      const rect = canvas.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      const px = t.clientX - rect.left, py = t.clientY - rect.top;
+      let pi = null;
+      pontos.forEach((pt, i) => {
+        if (Math.hypot(pt.x - px, pt.y - py) < 35) pi = i;
+      });
+      if (pi !== null) {
+        window.ontouchmove = window.onmousemove = ev => {
+          const r = canvas.getBoundingClientRect();
+          const tt = ev.touches ? ev.touches[0] : ev;
+          pontos[pi] = {x: tt.clientX - r.left, y: tt.clientY - r.top};
+          desenharUI();
+        };
+        window.ontouchend = window.onmouseup = () => {
+          window.ontouchmove = null;
+          window.onmousemove = null;
+        };
+      }
+    };
+  }
+
+  function desenharUI() {
+    const ctx = document.getElementById('canvas-ui').getContext('2d');
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.drawImage(imgTemp, 0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.strokeStyle = "var(--primary)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(pontos[0].x, pontos[0].y);
+    pontos.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fillStyle = "var(--primary)";
+    pontos.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  function rodarImagem90() {
+    if (!imgTemp) return;
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = imgTemp.height;
+    tempCanvas.height = imgTemp.width;
+    tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+    tempCtx.rotate(90 * Math.PI / 180);
+    tempCtx.drawImage(imgTemp, -imgTemp.width / 2, -imgTemp.height / 2);
+    
+    const novaImg = new Image();
+    novaImg.onload = function() {
+      imgTemp = novaImg;
+      const canvasUI = document.getElementById('canvas-ui');
+      const maxW = window.innerWidth * 0.95, maxH = window.innerHeight * 0.75;
+      escalaVisual = Math.min(maxW / imgTemp.width, maxH / imgTemp.height);
+      canvasUI.width = imgTemp.width * escalaVisual;
+      canvasUI.height = imgTemp.height * escalaVisual;
+      
+      // Ao rodar, faz reset aos pontos para evitar cortes torcidos
+      const w = canvasUI.width, h = canvasUI.height;
+      pontos = [
+        {x:w*0.1,y:h*0.1},
+        {x:w*0.9,y:h*0.1},
+        {x:w*0.9,y:h*0.9},
+        {x:w*0.1,y:h*0.9}
+      ];
+      desenharUI();
+    };
+    novaImg.src = tempCanvas.toDataURL('image/jpeg');
+  }
+
+  function processarScan() {
+    if (typeof cv === 'undefined') {
+      alert("OpenCV ainda está a carregar.");
+      return;
+    }
+    
+    // Garante que o OpenCV lê 100% exatamente o que está visível, sem bugs do browser
+    const tempC = document.createElement('canvas');
+    tempC.width = imgTemp.width;
+    tempC.height = imgTemp.height;
+    tempC.getContext('2d').drawImage(imgTemp, 0, 0);
+
+    const src = cv.imread(tempC);
+    let ptsR = [];
+    pontos.forEach(p => {
+      ptsR.push(p.x / escalaVisual);
+      ptsR.push(p.y / escalaVisual);
+    });
+    
+    let srcT = cv.matFromArray(4, 1, cv.CV_32FC2, ptsR);
+    const oW = 1000, oH = 1400;
+    let dstT = cv.matFromArray(4, 1, cv.CV_32FC2, [0,0, oW,0, oW,oH, 0,oH]);
+    let M = cv.getPerspectiveTransform(srcT, dstT);
+    let dst = new cv.Mat();
+    cv.warpPerspective(src, dst, M, new cv.Size(oW, oH));
+    dst.convertTo(dst, -1, 1.4, 10);
+    
+    const cOut = document.createElement('canvas');
+    cv.imshow(cOut, dst);
+    
+    anexos.push(cOut.toDataURL('image/jpeg', 0.8));
+    
+    renderAnexos();
+    fecharScanner();
+    src.delete(); dst.delete(); M.delete(); srcT.delete(); dstT.delete(); tempC.remove();
+  }
+
+  // -----------------------------
+
+  function renderAnexos() {
+    const container = document.getElementById('preview-container');
+    const imgHtml = anexos.map((img, i) =>
+      `<img src="${img}" class="thumb" onclick="if(confirm('Apagar imagem?')){anexos.splice(${i},1);renderAnexos();}">`
+    ).join('');
+    const pdfHtml = anexosPdf.map((p, i) =>
+      `<div class="thumb-pdf" onclick="if(confirm('Apagar PDF: ${p.nome}?')){anexosPdf.splice(${i},1);renderAnexos();}">
+        <span class="material-symbols-rounded">picture_as_pdf</span>
+        <span>${p.nome.length > 12 ? p.nome.substring(0,12)+'...' : p.nome}</span>
+      </div>`
+    ).join('');
+    container.innerHTML = imgHtml + pdfHtml;
+  }
+
+  function fecharScanner() {
+    document.getElementById('scanner-overlay').style.display = 'none';
+  }
+
+  function getImageFormat(dataUrl) {
+    if (!dataUrl || typeof dataUrl !== 'string') return 'JPEG';
+    if (dataUrl.startsWith('data:image/png')) return 'PNG';
+    if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
+    return 'JPEG';
+  }
+
+  function addImageFitPage(doc, imgData, margin = 5) {
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const maxW = pageW - (margin * 2);
+    const maxH = pageH - (margin * 2);
+    const imgProps = doc.getImageProperties(imgData);
+    const imgW = imgProps.width;
+    const imgH = imgProps.height;
+    const ratio = Math.min(maxW / imgW, maxH / imgH);
+    const renderW = imgW * ratio;
+    const renderH = imgH * ratio;
+    const x = (pageW - renderW) / 2;
+    const y = (pageH - renderH) / 2;
+    doc.addImage(imgData, getImageFormat(imgData), x, y, renderW, renderH);
+  }
+
+  function construirRegistoAtual() {
+    const nome = document.getElementById('nome').value.trim();
+    if (!nome) {
+      alert("O Nome é obrigatório.");
+      return null;
+    }
+    const getV = id => document.getElementById(id).value;
+    return {
+      idLocal: editandoID || Date.now(),
+      driveFileID: driveFileID || null,
+      nome: nome,
+      dataNasc: getV('dataNasc'),
+      idPaciente: getV('idPaciente'),
+      exame: getV('exame'),
+      hipotese: getV('hipotese'),
+      cirurgia: document.querySelector('input[name="cirurgia"]:checked').value,
+      cir_det: getV('cir_det'),
+      quimio: document.querySelector('input[name="quimio"]:checked').value,
+      q_det: getV('q_det'),
+      trauma: document.querySelector('input[name="trauma"]:checked').value,
+      t_det: getV('t_det'),
+      sintomas: getV('sintomas'),
+      inicio: getV('inicio'),
+      anexos: anexos.slice(),
+      anexosPdf: anexosPdf.slice(),
+      syncing: false,
+      syncingAt: null,
+      lastError: null
+    };
+  }
+
+  function criarPdfClinico(item) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+    try { doc.addImage(document.getElementById('mainLogo'), 'PNG', 85, 10, 40, 0); } catch (e) {}
+
+    doc.setFontSize(14);
+    doc.text("História Clínica — Imagiologia", 105, 35, {align:'center'});
+
+    doc.autoTable({
+      startY: 45,
+      head: [['Campo', 'Informação']],
+      body: [
+        ['Paciente', item.nome],
+        ['Nascimento', item.dataNasc || ""],
+        ['ID Proc.', item.idPaciente || ""],
+        ['Exame', item.exame || ""],
+        ['Hipótese Diag.', item.hipotese || ""],
+        ['Cirurgia', item.cir_det || item.cirurgia || ""],
+        ['Quimio/Radio', item.q_det || item.quimio || ""],
+        ['Trauma', item.t_det || item.trauma || ""],
+        ['Sintomas', item.sintomas || ""],
+        ['Início', item.inicio || ""]
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [42, 168, 168] },
+      styles: { overflow: 'linebreak' },
+      columnStyles: { 1: { cellWidth: 130 } }
+    });
+
+    const alturaFinalTabela = doc.lastAutoTable.finalY || 150;
+    const emailLogado = window.tecnicoLogado;
+    let dadosTecnico = { nome: "Técnico Não Autenticado", assinaturaBase64: null };
+
+    if (emailLogado && typeof equipaAliva !== 'undefined' && equipaAliva[emailLogado]) {
+      dadosTecnico = equipaAliva[emailLogado];
+    } else if (emailLogado) {
+      dadosTecnico.nome = emailLogado;
+    }
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Técnico Responsável:", 14, alturaFinalTabela + 15);
+
+    if (dadosTecnico.assinaturaBase64) {
+      doc.addImage(dadosTecnico.assinaturaBase64, 'PNG', 14, alturaFinalTabela + 20, 40, 15);
+      doc.setFont("helvetica", "normal");
+      doc.text(dadosTecnico.nome, 14, alturaFinalTabela + 42);
+    } else {
+      doc.setFont("helvetica", "italic");
+      doc.text(dadosTecnico.nome, 14, alturaFinalTabela + 25);
+      doc.setFont("helvetica", "normal");
+    }
+
+    (item.anexos || []).forEach(img => {
+      doc.addPage();
+      addImageFitPage(doc, img, 5);
+    });
+
+    return doc;
+  }
+
+  function gerarNomeFicheiro(nome) {
+    const nomeLimpo = (nome || "sem-nome")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    return `Ficha_${nomeLimpo}.pdf`;
+  }
+
+  async function gerarOuPartilharPDF() {
+    const item = construirRegistoAtual();
+    if (!item) return;
+    const botao = document.getElementById('btnPartilharPdf');
+    botao.disabled = true;
+    try {
+      const doc = criarPdfClinico(item);
+      const pdfBlob = doc.output('blob');
+      const fileName = gerarNomeFicheiro(item.nome);
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({ title: 'Ficha Clínica', text: `Ficha clínica de ${item.nome}`, files: [pdfFile] });
+      } else {
+        doc.save(fileName);
+        alert('O dispositivo não suporta partilha direta. O PDF foi descarregado.');
+      }
+    } catch (err) {
+      console.error('Erro ao gerar/partilhar PDF:', err);
+      try {
+        const doc = criarPdfClinico(item);
+        doc.save(gerarNomeFicheiro(item.nome));
+      } catch (e) {
+        alert('Não foi possível gerar o PDF.');
+      }
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
+  function finalizarRegisto() {
+    const reg = construirRegistoAtual();
+    if (!reg) return;
+    document.getElementById('btnFinalizar').disabled = true;
+    const chaveCache = reg.driveFileID || reg.idLocal;
+    let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+    cache[chaveCache] = reg;
+    localStorage.setItem('aliva_cache', JSON.stringify(cache));
+    let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+    fila = fila.filter(x => x.idLocal !== reg.idLocal);
+    fila.push(reg);
+    localStorage.setItem('aliva_fila', JSON.stringify(fila));
+    
+    resetForm();
+    atualizarFilaUI();
+    alert("Registo colocado na fila de envio.");
+    document.getElementById('btnFinalizar').disabled = false;
+  }
+
+  function atualizarFilaUI() {
+    const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+    const cont = document.getElementById('container-pendentes');
+    const lista = document.getElementById('lista-pendentes');
+    if (fila.length === 0) {
+      cont.classList.add('hidden');
+      lista.innerHTML = "";
+      return;
+    }
+    cont.classList.remove('hidden');
+    lista.innerHTML = fila.map(f => {
+      const stale = f.syncing && f.syncingAt && (Date.now() - f.syncingAt > SYNC_STALE_MS);
+      const emSync = f.syncing && !stale;
+      const estado = emSync
+        ? "A sincronizar..."
+        : (f.lastError ? `Pendente • erro: ${f.lastError}` : "Pendente de envio");
+      return `
+        <div class="item-registo" style="background:var(--pendente)">
+          <div><b>${f.nome}</b><br><small style="color:var(--pendente-txt);">${estado}</small></div>
+          <button class="action-btn" ${emSync ? 'disabled title="Em sincronização"' : ''} onclick="editarReg('${f.idLocal}', true)"><span class="material-symbols-rounded">edit</span></button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function carregarOnline() {
+    const lista = document.getElementById('lista-online');
+    lista.innerHTML = `<span class="material-symbols-rounded" style="font-size:18px; vertical-align:middle;">sync</span> A carregar do Drive...`;
+    try {
+      const res = await fetch(SCRIPT_URL, { method: 'GET', redirect: 'follow' });
+      const data = await res.json();
+      if (!data.ok) {
+        lista.innerHTML = "Erro: " + (data.error || "Falha ao listar ficheiros.");
+        return;
+      }
+      dbOnline = data.files || [];
+      const apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
+      const filtrados = dbOnline.filter(f => !apagados.includes(f.id));
+      if (filtrados.length === 0) {
+        lista.innerHTML = `<span class="material-symbols-rounded" style="font-size:18px; vertical-align:middle;">folder_off</span> Sem ficheiros no arquivo.`;
+        return;
+      }
+      lista.innerHTML = filtrados.map(f => `
+        <div class="item-registo" id="row-${f.id}">
+          <div><b style="font-size:13px;">${f.name}</b><br><small style="color:var(--text-muted);">${new Date(f.dateCreated).toLocaleDateString()}</small></div>
+          <div style="display:flex; gap:2px;">
+            <button class="action-btn" onclick="editarReg('${f.id}', false)"><span class="material-symbols-rounded">edit</span></button>
+            <button class="action-btn" onclick="apagarOnline('${f.id}')"><span class="material-symbols-rounded">delete</span></button>
+            <a href="${f.webViewLink}" target="_blank" class="action-btn" style="text-decoration:none;"><span class="material-symbols-rounded">visibility</span></a>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+      lista.innerHTML = `<span class="material-symbols-rounded" style="font-size:18px; vertical-align:middle; color:var(--erro);">wifi_off</span> Erro de ligação.`;
+    }
+  }
+
+  function editarReg(id, isPendente) {
+    let f = null;
+    let isOnlineEdit = false;
+    if (isPendente) {
+      const fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+      f = fila.find(x => x.idLocal == id);
+      if (!f) return;
+      const stale = f.syncing && f.syncingAt && (Date.now() - f.syncingAt > SYNC_STALE_MS);
+      if (f.syncing && !stale) {
+        alert("Este registo está neste momento em sincronização. Aguarda alguns segundos.");
+        return;
+      }
+      driveFileID = f.driveFileID || null;
+    } else {
+      isOnlineEdit = true;
+      const onlineDoc = dbOnline.find(x => x.id === id);
+      if (onlineDoc && onlineDoc.meta) {
+        try { f = JSON.parse(onlineDoc.meta); } catch (e) {}
+      }
+      if (!f) {
+        const cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+        f = cache[id];
+      }
+      if (!f) {
+        f = {
+          nome: onlineDoc ? onlineDoc.name.replace('Ficha_', '').replace('.pdf', '').replace(/-/g,' ') : "",
+          idLocal: Date.now(),
+          anexos: [],
+          anexosPdf: []
+        };
+      }
+      alert("🔒 PROTEÇÃO DE DADOS:\nComo esta ficha já foi arquivada, as fotos originais estão seladas no PDF.\n\nPara não as perder, será criada uma Adenda. O PDF antigo será mantido intacto.");
+      f.idLocal = Date.now();
+      driveFileID = null;
+    }
+    if (!f) return;
+    editandoID = f.idLocal;
+    const ind = document.getElementById('edit-indicator');
+    ind.classList.remove('hidden');
+    if (isOnlineEdit) {
+      ind.innerHTML = `<span class="material-symbols-rounded">post_add</span> MODO DE ADENDA (O PDF original não será apagado)`;
+      ind.style.background = "var(--pendente)";
+      ind.style.color = "var(--pendente-txt)";
+      ind.style.borderColor = "#ffeeba";
+    } else {
+      ind.innerHTML = `<span class="material-symbols-rounded">edit</span> MODO DE EDIÇÃO ATIVO`;
+      ind.style.background = "#e0f2f1";
+      ind.style.color = "#00695c";
+      ind.style.borderColor = "#b2dfdb";
+    }
+    document.getElementById('btnCancelar').classList.remove('hidden');
+    let nomeFinal = f.nome || "";
+    if (isOnlineEdit && !nomeFinal.includes("(Adenda)")) nomeFinal += " (Adenda)";
+    document.getElementById('nome').value = nomeFinal;
+    document.getElementById('dataNasc').value = f.dataNasc || "";
+    document.getElementById('idPaciente').value = f.idPaciente || "";
+    document.getElementById('exame').value = f.exame || "";
+    document.getElementById('hipotese').value = f.hipotese || "";
+    if (f.cirurgia === "Sim") {
+      document.getElementById('cs').checked = true; toggleC('gc', true);
+      document.getElementById('cir_det').value = f.cir_det || "";
+    } else {
+      document.getElementById('cn').checked = true; toggleC('gc', false);
+      document.getElementById('cir_det').value = "";
+    }
+    if (f.quimio === "Sim") {
+      document.getElementById('qs').checked = true; toggleC('gq', true);
+      document.getElementById('q_det').value = f.q_det || "";
+    } else {
+      document.getElementById('qn').checked = true; toggleC('gq', false);
+      document.getElementById('q_det').value = "";
+    }
+    if (f.trauma === "Sim") {
+      document.getElementById('ts').checked = true; toggleC('gt', true);
+      document.getElementById('t_det').value = f.t_det || "";
+    } else {
+      document.getElementById('tn').checked = true; toggleC('gt', false);
+      document.getElementById('t_det').value = "";
+    }
+    document.getElementById('sintomas').value = f.sintomas || "";
+    document.getElementById('inicio').value = f.inicio || "";
+    anexos = Array.isArray(f.anexos) ? f.anexos : [];
+    anexosPdf = Array.isArray(f.anexosPdf) ? f.anexosPdf : [];
+    renderAnexos();
+    switchTab('aba-novo');
+    window.scrollTo(0,0);
+  }
+
+  async function apagarOnline(id) {
+    if (!confirm("Eliminar permanentemente?")) return;
+    const row = document.getElementById('row-' + id);
+    if (row) row.style.display = 'none';
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST', redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'delete', id: id })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Falha ao apagar.");
+      let apagados = JSON.parse(localStorage.getItem('aliva_apagados') || "[]");
+      if (!apagados.includes(id)) apagados.push(id);
+      localStorage.setItem('aliva_apagados', JSON.stringify(apagados));
+    } catch (e) {
+      console.error(e);
+      if (row) row.style.display = 'flex';
+      alert("Erro ao apagar: " + e.message);
+    }
+  }
+
+  async function syncProcess() {
+    if (isSyncing) return;
+    if (!navigator.onLine) return; 
+    
+    let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+    if (!fila.length) return;
+    
+    const agora = Date.now();
+    fila = fila.map((f, i) => {
+      if (i === 0 && f.syncing && f.syncingAt && (agora - f.syncingAt > SYNC_STALE_MS)) {
+        return { ...f, syncing: false, syncingAt: null, lastError: "Reenvio após bloqueio antigo" };
+      }
+      return f;
+    });
+    localStorage.setItem('aliva_fila', JSON.stringify(fila));
+    
+    const itemAtual = fila[0];
+    if (!itemAtual) return;
+    if (itemAtual.syncing) return;
+    
+    fila[0] = { ...itemAtual, syncing: true, syncingAt: agora, lastError: null };
+    localStorage.setItem('aliva_fila', JSON.stringify(fila));
+    atualizarFilaUI();
+    isSyncing = true;
+    
+    const item = fila[0];
+    try {
+      const doc = criarPdfClinico(item);
+      const { anexos, anexosPdf, syncing, syncingAt, lastError, ...itemLimpo } = item;
+      const metaObj = {
+        ...itemLimpo,
+        syncing: false, syncingAt: null, lastError: null,
+        anexosCount: (item.anexos || []).length,
+        anexosPdfCount: (item.anexosPdf || []).length
+      };
+      
+      const base64 = doc.output('datauristring').split(',')[1];
+      const nomeFicheiro = gerarNomeFicheiro(item.nome).replace(/\.pdf$/i, '');
+      const payload = {
+        nome: nomeFicheiro,
+        pdf: base64,
+        oldID: item.driveFileID || null,
+        tecnico: window.tecnicoLogado || "Não autenticado",
+        meta: JSON.stringify(metaObj),
+        anexosPdf: (item.anexosPdf || []).map(p => ({ nome: p.nome, base64: p.base64 }))
+      };
+      
+      const res = await fetchComTimeout(SCRIPT_URL, {
+        method: 'POST', redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        timeout: 120000 
+      });
+      
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Falha na sincronização.");
+      
+      let filaAtual = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+      filaAtual = filaAtual.filter(x => x.idLocal !== item.idLocal);
+      localStorage.setItem('aliva_fila', JSON.stringify(filaAtual));
+      
+      let cache = JSON.parse(localStorage.getItem('aliva_cache') || "{}");
+      delete cache[item.idLocal];
+      if (item.driveFileID) delete cache[item.driveFileID];
+      if (data.file && data.file.id) {
+        cache[data.file.id] = {
+          ...item,
+          driveFileID: data.file.id,
+          syncing: false, syncingAt: null, lastError: null
+        };
+      }
+      localStorage.setItem('aliva_cache', JSON.stringify(cache));
+      
+      if (data.oldDelete && data.oldDelete.attempted && !data.oldDelete.success) {
+        console.warn("Falha ao apagar ficheiro antigo:", data.oldDelete.message);
+      }
+      atualizarFilaUI();
+      
+    } catch (e) {
+      console.error("Erro na sincronização:", e);
+      let filaErro = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
+      const idx = filaErro.findIndex(x => x.idLocal === item.idLocal);
+      if (idx !== -1) {
+        filaErro[idx] = { ...filaErro[idx], syncing: false, syncingAt: null, lastError: e.message || "Erro na sincronização" };
+        localStorage.setItem('aliva_fila', JSON.stringify(filaErro));
+      }
+      atualizarFilaUI();
+    } finally {
+      isSyncing = false;
+    }
+  }
+
+  function resetForm() {
+    editandoID = null;
+    driveFileID = null;
+    document.getElementById('edit-indicator').classList.add('hidden');
+    document.getElementById('btnCancelar').classList.add('hidden');
+    document.querySelectorAll('input[type="text"], input[type="date"], textarea').forEach(i => i.value = "");
+    document.getElementById('cn').checked = true; toggleC('gc', false); document.getElementById('cir_det').value = "";
+    document.getElementById('qn').checked = true; toggleC('gq', false); document.getElementById('q_det').value = "";
+    document.getElementById('tn').checked = true; toggleC('gt', false); document.getElementById('t_det').value = "";
+    anexos = [];
+    anexosPdf = [];
+    renderAnexos();
+    document.getElementById('btnFinalizar').disabled = false;
+    localStorage.removeItem('aliva_rascunho'); 
+    window.scrollTo(0,0);
+  }
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    onAuthStateChanged,
+    signOut,
+    sendPasswordResetEmail
+  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCwmnz5QIr5c5-AsD01yGTq0SmNt8iaiuE",
+    authDomain: "alivainformacaoclinica.firebaseapp.com",
+    projectId: "alivainformacaoclinica",
+    storageBucket: "alivainformacaoclinica.firebasestorage.app",
+    messagingSenderId: "1057548833232",
+    appId: "1:1057548833232:web:d3f17af9722b4c733769d5",
+    measurementId: "G-M98S3P5VPN"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const loginContainer = document.getElementById('login-container');
+  const appPrincipal = document.getElementById('app-principal');
+  const emailLogin = document.getElementById('emailLogin');
+  const passLogin = document.getElementById('passLogin');
+  const btnEntrar = document.getElementById('btnEntrar');
+  const btnSair = document.getElementById('btnSair');
+  const btnRecuperar = document.getElementById('btnRecuperar');
+  const erroMsg = document.getElementById('login-erro');
+  const infoMsg = document.getElementById('login-msg');
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      loginContainer.style.display = 'none';
+      appPrincipal.style.display = 'block';
+      window.tecnicoLogado = user.email;
+    } else {
+      loginContainer.style.display = 'block';
+      appPrincipal.style.display = 'none';
+      window.tecnicoLogado = null;
+    }
+  });
+
+  btnEntrar.addEventListener('click', async () => {
+    let username = emailLogin.value.trim().toLowerCase();
+    const password = passLogin.value;
+    
+    erroMsg.style.display = 'none';
+    infoMsg.style.display = 'none';
+    
+    if (!username || !password) {
+      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Por favor, preenche o utilizador e a password.`;
+      erroMsg.style.display = 'block';
+      return;
+    }
+
+    const email = username.includes('@') ? username : `${username}@alivasaude.com`;
+
+    btnEntrar.disabled = true;
+    btnEntrar.innerHTML = `<span class="material-symbols-rounded">hourglass_empty</span> A validar...`;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Credenciais inválidas. Tenta novamente.`;
+      erroMsg.style.display = 'block';
+      console.error(error.code, error.message);
+    } finally {
+      btnEntrar.disabled = false;
+      btnEntrar.innerHTML = `<span class="material-symbols-rounded">login</span> Entrar`;
+    }
+  });
+
+  btnRecuperar.addEventListener('click', async () => {
+    let username = emailLogin.value.trim().toLowerCase();
+    
+    erroMsg.style.display = 'none';
+    infoMsg.style.display = 'none';
+    
+    if (!username) {
+      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Insere o teu utilizador no campo acima.`;
+      erroMsg.style.display = 'block';
+      return;
+    }
+
+    const email = username.includes('@') ? username : `${username}@alivasaude.com`;
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      infoMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">check_circle</span> As instruções foram enviadas.`;
+      infoMsg.style.display = 'block';
+    } catch (error) {
+      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Erro ao enviar pedido. Verifica o utilizador.`;
+      erroMsg.style.display = 'block';
+      console.error(error.code, error.message);
+    }
+  });
+
+  btnSair.addEventListener('click', () => {
+    signOut(auth).catch((error) => console.error("Erro ao sair:", error));
+  });
+</script>
+</body>
+</html>
