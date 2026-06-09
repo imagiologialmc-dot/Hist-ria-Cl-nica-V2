@@ -166,10 +166,12 @@
     <img src="Hlogo.png?v=3" alt="Informação Clínica" class="logo">
   </div>
   <div class="section-title" style="text-align: center; justify-content: center;"><span class="material-symbols-rounded">lock</span> Acesso Restrito à Equipa</div>
+  
   <div class="input-group">
-    <label><span class="material-symbols-rounded" style="font-size: 18px;">mail</span> Email Profissional</label>
-    <input type="email" id="emailLogin" placeholder="exemplo@alivasaude.com">
+    <label><span class="material-symbols-rounded" style="font-size: 18px;">person</span> Utilizador</label>
+    <input type="text" id="emailLogin" placeholder="nome.apelido (ex: jalusa.fernandes)" autocapitalize="none">
   </div>
+  
   <div class="input-group">
     <label><span class="material-symbols-rounded" style="font-size: 18px;">key</span> Password</label>
     <input type="password" id="passLogin">
@@ -298,8 +300,8 @@
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9xfW5yq16Y-SqA8mVMAFEw2E4ndSLpZgytw7CFuxnVngb7gdBqy1nylOdjT8vIEY/exec";
 
-  let anexos = [];      // imagens — embutidas no PDF clínico
-  let anexosPdf = [];   // PDFs — enviados separadamente para o Drive
+  let anexos = [];      
+  let anexosPdf = [];   
   let pontos = [], imgTemp = null, escalaVisual = 1, editandoID = null, driveFileID = null, dbOnline = [];
   let isSyncing = false;
   const SYNC_STALE_MS = 2 * 60 * 1000;
@@ -412,7 +414,6 @@
     carregarOnline();
     carregarRascunho();
     
-    // Auto-save listener para qualquer mudança nos inputs do formulário principal
     document.getElementById('aba-novo').addEventListener('input', salvarRascunho);
     
     setInterval(syncProcess, 5000);
@@ -573,7 +574,6 @@
     const cOut = document.createElement('canvas');
     cv.imshow(cOut, dst);
     
-    // O OpenCV exporta também em 0.8 para ajudar na performance
     anexos.push(cOut.toDataURL('image/jpeg', 0.8));
     
     renderAnexos();
@@ -943,7 +943,7 @@
 
   async function syncProcess() {
     if (isSyncing) return;
-    if (!navigator.onLine) return; // Evita sincronizar se não houver internet
+    if (!navigator.onLine) return; 
     
     let fila = JSON.parse(localStorage.getItem('aliva_fila') || "[]");
     if (!fila.length) return;
@@ -992,7 +992,7 @@
         method: 'POST', redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
-        timeout: 120000 // Timeout de 2 minutos
+        timeout: 120000 
       });
       
       const data = await res.json();
@@ -1046,7 +1046,7 @@
     anexosPdf = [];
     renderAnexos();
     document.getElementById('btnFinalizar').disabled = false;
-    localStorage.removeItem('aliva_rascunho'); // Limpa o rascunho salvo
+    localStorage.removeItem('aliva_rascunho'); 
     window.scrollTo(0,0);
   }
 </script>
@@ -1097,15 +1097,20 @@
   });
 
   btnEntrar.addEventListener('click', async () => {
-    const email = emailLogin.value.trim();
+    let username = emailLogin.value.trim().toLowerCase();
     const password = passLogin.value;
+    
     erroMsg.style.display = 'none';
     infoMsg.style.display = 'none';
-    if (!email || !password) {
-      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Por favor, preenche o email e a password.`;
+    
+    if (!username || !password) {
+      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Por favor, preenche o utilizador e a password.`;
       erroMsg.style.display = 'block';
       return;
     }
+
+    const email = username.includes('@') ? username : `${username}@alivasaude.com`;
+
     btnEntrar.disabled = true;
     btnEntrar.innerHTML = `<span class="material-symbols-rounded">hourglass_empty</span> A validar...`;
     try {
@@ -1121,20 +1126,25 @@
   });
 
   btnRecuperar.addEventListener('click', async () => {
-    const email = emailLogin.value.trim();
+    let username = emailLogin.value.trim().toLowerCase();
+    
     erroMsg.style.display = 'none';
     infoMsg.style.display = 'none';
-    if (!email) {
-      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Insere o teu email profissional no campo acima.`;
+    
+    if (!username) {
+      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Insere o teu utilizador no campo acima.`;
       erroMsg.style.display = 'block';
       return;
     }
+
+    const email = username.includes('@') ? username : `${username}@alivasaude.com`;
+
     try {
       await sendPasswordResetEmail(auth, email);
       infoMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">check_circle</span> As instruções foram enviadas.`;
       infoMsg.style.display = 'block';
     } catch (error) {
-      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Erro ao enviar pedido. Verifica o email.`;
+      erroMsg.innerHTML = `<span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">error</span> Erro ao enviar pedido. Verifica o utilizador.`;
       erroMsg.style.display = 'block';
       console.error(error.code, error.message);
     }
